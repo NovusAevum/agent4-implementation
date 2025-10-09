@@ -12,7 +12,7 @@ app.use(cors());
 app.use(express.json());
 
 // Health check endpoint
-app.get('/health', (req: Request, res: Response) => {
+app.get('/health', (_req: Request, res: Response) => {
   res.status(200).json({
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -25,10 +25,11 @@ app.post('/api/agent4/execute', async (req: Request, res: Response) => {
   const { task, context = {} } = req.body;
   
   if (!task) {
-    return res.status(400).json({
+    res.status(400).json({
       success: false,
       error: 'Task is required',
     });
+    return;
   }
 
   try {
@@ -41,9 +42,10 @@ app.post('/api/agent4/execute', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Agent4 execution error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     res.status(500).json({
       success: false,
-      error: error.message || 'Internal server error',
+      error: errorMessage,
     });
   }
 });

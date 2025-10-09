@@ -69,7 +69,8 @@ PLAN:`;
       return plan;
     } catch (error) {
       console.error('Error in plan phase:', error);
-      throw new Error(`Plan phase failed: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Plan phase failed: ${errorMessage}`);
     }
   }
 
@@ -97,7 +98,8 @@ Provide a structured JSON response with your findings.`;
       return parsedDiscovery;
     } catch (error) {
       console.error('Error in discover phase:', error);
-      throw new Error(`Discover phase failed: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Discover phase failed: ${errorMessage}`);
     }
   }
 
@@ -127,7 +129,8 @@ Provide a structured JSON response with the execution results.`;
       return parsedExecution;
     } catch (error) {
       console.error('Error in execute phase:', error);
-      throw new Error(`Execute phase failed: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Execute phase failed: ${errorMessage}`);
     }
   }
 
@@ -154,6 +157,7 @@ Provide a structured JSON response with the validation results.`;
       await this.updateState({ 
         validation: parsedValidation,
         metadata: {
+          ...this.state.metadata,
           endTime: Date.now(),
         },
       });
@@ -162,7 +166,8 @@ Provide a structured JSON response with the validation results.`;
       return parsedValidation;
     } catch (error) {
       console.error('Error in validate phase:', error);
-      throw new Error(`Validate phase failed: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Validate phase failed: ${errorMessage}`);
     }
   }
 
