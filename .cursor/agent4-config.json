@@ -1,0 +1,43 @@
+{
+  "agentName": "Agent 4 Multi-LLM",
+  "agentVersion": "1.0.0",
+  "provider": "custom",
+  "apiEndpoint": "http://localhost:3000/api/agent4/execute",
+  "authentication": {
+    "type": "none"
+  },
+  "capabilities": {
+    "codeGeneration": true,
+    "codeCompletion": true,
+    "codeExplanation": true,
+    "debugging": true,
+    "refactoring": true,
+    "testing": true,
+    "documentation": true
+  },
+  "workflowSettings": {
+    "phases": ["PLAN", "DISCOVER", "EXECUTE", "VALIDATE"],
+    "enableBatchOperations": true,
+    "maxBatchSize": 6,
+    "enableCheckpoints": true,
+    "enableMetaThinking": true,
+    "autoFallback": true
+  },
+  "llmProviders": {
+    "primary": "huggingface",
+    "fallbackOrder": ["mistral", "deepseek", "openrouter", "codestral"],
+    "healthCheckInterval": 300000
+  },
+  "ui": {
+    "showProgress": true,
+    "showDecisionTrees": true,
+    "showConfidenceScores": true,
+    "realtimeUpdates": true
+  },
+  "advanced": {
+    "maxAutonomy": true,
+    "extendedThinking": true,
+    "selfTesting": true,
+    "patternBasedEdits": true
+  }
+}

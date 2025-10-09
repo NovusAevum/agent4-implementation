@@ -1,4 +1,5 @@
 import { FallbackLLM } from '../llm/fallback';
+import { AGENT4_SYSTEM_PROMPT, Agent4Response, PhaseResult } from './agent4-protocol';
 
 export interface WorkflowState {
   plan?: string;
@@ -11,6 +12,17 @@ export interface WorkflowState {
     provider: string;
     stepsCompleted: string[];
   };
+  metaThinking?: {
+    decisionTree?: any;
+    confidenceScores?: Record<string, number>;
+    tradeoffs?: string[];
+  };
+  checkpoints?: Array<{
+    id: string;
+    timestamp: number;
+    phase: string;
+    state: any;
+  }>;
 }
 
 export class Agent4Workflow {
