@@ -1,0 +1,26 @@
+name: Sync Env to Hugging Face
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *' # Daily at midnight
+
+jobs:
+  sync-env:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync environment variables
+        uses: maddox/actions-huggingface-update-space-variables@v1
+        with:
+          hf_username: ${{ secrets.HF_USERNAME }}
+          hf_token: ${{ secrets.HF_TOKEN }}
+          space_name: agent4-implementation
+          variables: |
+            CONTINUE_API_KEY=${{ secrets.CONTINUE_API_KEY }}
+            ALIBABA_QWEN_API_KEY=${{ secrets.ALIBABA_QWEN_API_KEY }}
+            KIMI_API_KEY=${{ secrets.KIMI_API_KEY }}
+            CODECOPILOT_KEY=${{ secrets.CODECOPILOT_KEY }}
+            NODE_ENV=production
+            PORT=3000
+            DEFAULT_LLM_PROVIDER=continue
+            FALLBACK_ORDER=continue,alibaba,kimi,codestral

@@ -1,0 +1,30 @@
+# huggingface.yaml
+space: LetTryGpt/agent4-implementation
+sdk: docker
+app_port: 3000
+
+# Environment variables
+env_vars:
+  - CONTINUE_API_KEY
+  - ALIBABA_QWEN_API_KEY
+  - KIMI_API_KEY
+  - CODECOPILOT_KEY
+  - HF_TOKEN
+  - NODE_ENV
+  - PORT
+  - DEFAULT_LLM_PROVIDER
+  - FALLBACK_ORDER
+
+# Resources
+resources:
+  cpu: 2
+  memory: 8GB
+  gpu: false
+
+# Health check
+health_checks:
+  path: /health
+  max_retries: 3
+  initial_delay: 30
+  period: 60
+  timeout: 10
