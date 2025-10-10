@@ -2,14 +2,14 @@
 
 <div align="center">
 
-[![CI/CD](https://github.com/your-username/agent4-implementation/workflows/CI%2FCD/badge.svg)](https://github.com/your-username/agent4-implementation/actions)
+[![CI/CD](https://github.com/NovusAevum/agent4-implementation/workflows/CI%2FCD/badge.svg)](https://github.com/NovusAevum/agent4-implementation/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
 [![HuggingFace](https://img.shields.io/badge/🤗%20Hugging%20Face-Spaces-yellow)](https://huggingface.co/)
 
-**A production-ready, enterprise-grade multi-LLM AI agent framework with automatic fallback, health monitoring, and workflow orchestration.**
+**A Multi-Agent System (MAS) with intelligent LLM orchestration, featuring automatic fallback, health monitoring, and autonomous workflow execution.**
 
 [Features](#-features) •
 [Quick Start](#-quick-start) •
@@ -40,7 +40,7 @@
 
 ## 🎯 Overview
 
-Agent4 is a robust, production-ready TypeScript framework for building autonomous AI agents with seamless integration across multiple LLM providers. Built with enterprise requirements in mind, it provides automatic failover, health monitoring, and a flexible workflow engine.
+Agent4 is a sophisticated Multi-Agent System (MAS) built in TypeScript for orchestrating autonomous AI agents across multiple LLM providers. It provides intelligent failover, real-time health monitoring, and a flexible 4-phase workflow engine designed for complex task execution.
 
 ### Key Highlights
 
@@ -94,9 +94,11 @@ graph TB
     Agent -->|Return Result| API
     API -->|HTTP Response| Client
     
-    style Agent fill:#f9f,stroke:#333,stroke-width:4px
-    style Fallback fill:#bbf,stroke:#333,stroke-width:2px
-    style Monitor fill:#bfb,stroke:#333,stroke-width:2px
+    style Agent fill:#e1f5ff,stroke:#01579b,stroke-width:3px,color:#000
+    style Fallback fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#000
+    style Monitor fill:#f1f8e9,stroke:#33691e,stroke-width:2px,color:#000
+    style Client fill:#fce4ec,stroke:#880e4f,stroke-width:2px,color:#000
+    style API fill:#f3e5f5,stroke:#4a148c,stroke-width:2px,color:#000
 ```
 
 ### Workflow Execution Flow
@@ -112,7 +114,7 @@ sequenceDiagram
     Client->>API: POST /api/agent4/execute
     API->>Agent4: Initialize Workflow
     
-    rect rgb(200, 220, 250)
+    rect rgba(33, 150, 243, 0.1)
     Note over Agent4,LLMProvider: PLAN Phase
     Agent4->>FallbackLLM: Generate Plan
     FallbackLLM->>LLMProvider: Request
@@ -120,7 +122,7 @@ sequenceDiagram
     FallbackLLM-->>Agent4: Plan
     end
     
-    rect rgb(220, 250, 200)
+    rect rgba(76, 175, 80, 0.1)
     Note over Agent4,LLMProvider: DISCOVER Phase
     Agent4->>FallbackLLM: Discover Resources
     FallbackLLM->>LLMProvider: Request
@@ -128,7 +130,7 @@ sequenceDiagram
     FallbackLLM-->>Agent4: Discovery Data
     end
     
-    rect rgb(250, 220, 200)
+    rect rgba(255, 152, 0, 0.1)
     Note over Agent4,LLMProvider: EXECUTE Phase
     Agent4->>FallbackLLM: Execute Actions
     FallbackLLM->>LLMProvider: Request
@@ -136,7 +138,7 @@ sequenceDiagram
     FallbackLLM-->>Agent4: Execution Results
     end
     
-    rect rgb(250, 200, 220)
+    rect rgba(156, 39, 176, 0.1)
     Note over Agent4,LLMProvider: VALIDATE Phase
     Agent4->>FallbackLLM: Validate Results
     FallbackLLM->>LLMProvider: Request
@@ -563,7 +565,7 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 ```bash
 # Setup
-git clone https://github.com/your-username/agent4-implementation.git
+git clone https://github.com/NovusAevum/agent4-implementation.git
 cd agent4-implementation
 npm install
 
@@ -596,20 +598,26 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [OpenRouter](https://openrouter.ai/)
 - [Codestral](https://mistral.ai/news/codestral/)
 
-## 📞 Support
+## 📄 License
 
-- 📧 Email: support@agent4.dev
-- 💬 Discord: [Join our community](https://discord.gg/agent4)
-- 🐛 Issues: [GitHub Issues](https://github.com/your-username/agent4-implementation/issues)
-- 📚 Docs: [Full Documentation](https://docs.agent4.dev)
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 👨‍💻 Author
+
+**Wan Mohamad Hanis Bin Wan Hassan (NovusAevum)**  
+*AI Engineering | Full-Stack Developer*
+
+- 🌐 **GitHub:** [@NovusAevum](https://github.com/NovusAevum)
+- 💼 **LinkedIn:** [Wan Mohamad Hanis](https://www.linkedin.com/in/wanmohamadhanis/)
+- 📧 **Email:** [wmh2u@proton.me](mailto:wmh2u@proton.me)
+- 🤗 **HuggingFace:** [@LetsTryGPT](https://huggingface.co/LetsTryGPT)
 
 ---
 
 <div align="center">
 
-Made with ❤️ by the Agent4 Team
+**⭐ Star this repository if Agent4 helps supercharge your AI development!**
 
-[![GitHub stars](https://img.shields.io/github/stars/your-username/agent4-implementation?style=social)](https://github.com/your-username/agent4-implementation)
-[![Twitter Follow](https://img.shields.io/twitter/follow/agent4dev?style=social)](https://twitter.com/agent4dev)
+[![GitHub stars](https://img.shields.io/github/stars/NovusAevum/agent4-implementation?style=social)](https://github.com/NovusAevum/agent4-implementation)
 
 </div>
