@@ -1,7 +1,7 @@
 import { FallbackLLM } from '../llm/fallback';
-import { AGENT4_SYSTEM_PROMPT, Agent4Response, PhaseResult } from './agent4-protocol';
 
-export interface WorkflowState {
+export type WorkflowPhase = 'plan' | 'discover' | 'execute' | 'validate';
+export type WorkflowState = {
   plan?: string;
   discovery?: any;
   execution?: any;
