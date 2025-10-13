@@ -46,7 +46,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
           
       - name: Update CHANGELOG.md
-        uses: stefanzweifel/git-auto-commit-action@v4
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "chore: update CHANGELOG.md for ${{ github.ref_name }}"
           file_pattern: CHANGELOG.md
