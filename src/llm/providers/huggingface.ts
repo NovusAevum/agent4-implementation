@@ -1,5 +1,5 @@
 import { BaseProvider } from './base';
-import fetch from 'node-fetch';
+import axios from 'axios';
 import { config } from '../../config';
 
 export class HuggingFaceProvider extends BaseProvider {
@@ -25,22 +25,20 @@ export class HuggingFaceProvider extends BaseProvider {
 
     for (let attempt = 0; attempt < this.maxRetries; attempt++) {
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), this.timeout);
-
-        const response = await fetch(url, {
-          ...options,
-          signal: controller.signal,
+        const response = await axios({
+          method: 'POST',
+          url,
+          data: options.body,
           headers: {
             Authorization: `Bearer ${this.apiKey}`,
             'Content-Type': 'application/json',
             ...(options.headers || {}),
           },
+          timeout: this.timeout,
         });
-        clearTimeout(timeoutId);
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
+        if (response.status >= 400) {
+          const errorData = response.data;
           throw new Error(
             `Hugging Face API error (${response.status}): ${
               (errorData as any)?.error || response.statusText
@@ -48,7 +46,7 @@ export class HuggingFaceProvider extends BaseProvider {
           );
         }
 
-        return await response.json();
+        return response.data;
       } catch (error: any) {
         lastError = error;
 
@@ -62,12 +60,12 @@ export class HuggingFaceProvider extends BaseProvider {
   }
 
   async generate(prompt: string, options: any = {}): Promise<string> {
-    const { max_tokens = 500, temperature = 0.7, top_p = 0.9, ...otherOptions } = options;
+    const { maxTokens = 500, temperature = 0.7, top_p = 0.9, ...otherOptions } = options;
 
     const data = {
       inputs: prompt,
       parameters: {
-        max_new_tokens: max_tokens,
+        max_new_tokens: maxTokens,
         temperature,
         top_p,
         return_full_text: false,
@@ -77,8 +75,7 @@ export class HuggingFaceProvider extends BaseProvider {
 
     try {
       const response = await this.makeRequestWithRetry(this.apiUrl, {
-        method: 'POST',
-        body: JSON.stringify(data),
+        body: data,
       });
 
       if (Array.isArray(response) && response[0]?.generated_text) {
@@ -96,15 +93,13 @@ export class HuggingFaceProvider extends BaseProvider {
   async checkHealth(): Promise<boolean> {
     try {
       // Check if the model is ready
-      const response = await fetch(this.apiUrl, {
-        headers: { Authorization: `Bearer ${this.apiKey}` },
+      const response = await axios.post(this.apiUrl, {}, {
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+        },
       });
 
-      if (!response.ok) {
-        throw new Error(`API returned status ${response.status}`);
-      }
-
-      return true;
+      return response.status === 200;
     } catch (error) {
       console.error('Hugging Face health check failed:', error);
       return false;

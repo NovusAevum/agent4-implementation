@@ -1,5 +1,5 @@
 import { BaseProvider } from './base';
-import fetch from 'node-fetch';
+import axios from 'axios';
 
 export class MistralProvider extends BaseProvider {
   private readonly apiUrl: string;
@@ -16,7 +16,7 @@ export class MistralProvider extends BaseProvider {
   }
 
   async generate(prompt: string, options: any = {}): Promise<string> {
-    const { max_tokens = 1024, temperature = 0.7, top_p = 1.0, ...otherOptions } = options;
+    const { max_tokens = 1024, temperature = 0.7, top_p = 1.0 } = options;
 
     const data = {
       model: this.model,
@@ -24,27 +24,17 @@ export class MistralProvider extends BaseProvider {
       max_tokens,
       temperature,
       top_p,
-      ...otherOptions,
     };
 
     try {
-      const response = await fetch(this.apiUrl, {
-        method: 'POST',
+      const response = await axios.post(this.apiUrl, data, {
         headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.apiKey}`,
         },
-        body: JSON.stringify(data),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          `Mistral API error (${response.status}): ${(errorData as any)?.error?.message || response.statusText}`
-        );
-      }
-
-      const result = (await response.json()) as any;
+      const result = response.data as any;
       return result.choices[0]?.message?.content || '';
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
