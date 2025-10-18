@@ -1,0 +1,118 @@
+# huggingface.yaml
+# Space configuration
+space: ${{ github.repository_owner }}/${{ github.event.repository.name }}
+sdk: docker
+app_port: 3000
+
+# Environment variables
+env_vars:
+  # Required environment variables
+  - NODE_ENV=production
+  - PORT=3000
+  
+  # LLM Provider API Keys
+  - HUGGINGFACE_API_KEY
+  - ALIBABA_QWEN_API_KEY
+  - KIMI_API_KEY
+  - MISTRAL_API_KEY
+  - DEEPSEEK_API_KEY
+  - OPENROUTER_API_KEY
+  - CODESTRAL_API_KEY
+  
+  # Application Configuration
+  - DEFAULT_LLM_PROVIDER=huggingface
+  - FALLBACK_ORDER=huggingface,alibaba_qwen,kimi,mistral,deepseek,openrouter,codestral
+  - LOG_LEVEL=info
+  - CORS_ORIGIN=*
+  - RATE_LIMIT_WINDOW_MS=900000
+  - RATE_LIMIT_MAX_REQUESTS=100
+
+# Resources
+resources:
+  cpu: 2
+  memory: 8GB
+  gpu: false  # Set to true if using GPU-accelerated models
+  disk: 10GB
+
+# Health check configuration
+health_checks:
+  path: /health
+  max_retries: 3
+  initial_delay: 30
+  period: 60
+  timeout: 10
+  success_threshold: 1
+  failure_threshold: 3
+
+# Build settings
+build:
+  dockerfile: Dockerfile
+  target: production
+  build_args:
+    - NODE_ENV=production
+  cache_from: type=gha
+  cache_to: type=gha,mode=max
+
+# Deployment settings
+deploy:
+  strategy: rolling
+  replicas: 1
+  update_config:
+    parallelism: 1
+    delay: 10s
+    order: start-first
+  restart_policy:
+    condition: on-failure
+    delay: 5s
+    max_attempts: 3
+    window: 120s
+
+# Logging configuration
+logging:
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+    compress: "true"
+
+# Monitoring
+monitoring:
+  enable: true
+  path: /metrics
+  port: 3001
+  scrape_interval: 15s
+  timeout: 10s
+
+# Security
+security:
+  read_only_root_filesystem: true
+  allow_privilege_escalation: false
+  run_as_non_root: true
+  run_as_user: 1000
+  run_as_group: 1000
+  capabilities:
+    drop:
+      - ALL
+  seccomp:
+    profile: default
+
+# Networking
+networking:
+  ports:
+    - 3000:3000
+  hostname: app
+  domainname: hf.space
+
+# Storage
+volumes:
+  - name: app-data
+    path: /data
+    size: 1GB
+
+# Autoscaling (if needed)
+autoscaling:
+  enabled: false
+  min_replicas: 1
+  max_replicas: 3
+  target_cpu_utilization: 70
+  target_memory_utilization: 80

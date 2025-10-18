@@ -1,0 +1,15 @@
+blank_issues_enabled: false
+due_date: null
+contact_links:
+  - name: 🐞 Bug Report
+    url: https://github.com/novusaevum/agent4-implementation/issues/new?assignees=&labels=bug&projects=&template=bug_report.md&title=
+    about: Report a bug in the Agent 4 implementation
+  - name: ✨ Feature Request
+    url: https://github.com/novusaevum/agent4-implementation/issues/new?assignees=&labels=enhancement&projects=&template=feature_request.md&title=
+    about: Suggest an idea for the project
+  - name: 📚 Documentation
+    url: https://github.com/novusaevum/agent4-implementation/issues/new?assignees=&labels=documentation&projects=&template=documentation.md&title=
+    about: Suggest documentation improvements
+  - name: ❓ Question
+    url: https://github.com/novusaevum/agent4-implementation/discussions/new?category=q-a
+    about: Ask a question about the project

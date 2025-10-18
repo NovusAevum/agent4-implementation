@@ -1,0 +1,47 @@
+title = "gitleaks config"
+
+# Scan all files, not just git tracked files
+[allowlist]
+  description = "Ignore test files and configs"
+  paths = [
+    "test/*.js",
+    "test/*.ts",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/__mocks__/*",
+    "**/__tests__/*",
+    "**/test/**",
+    ".github/workflows/*.yml",
+    "*.md"
+  ]
+
+# Rules for detecting sensitive information
+[[rules]]
+  description = "API Keys"
+  id = "api-key"
+  regex = '''(?i)(?:key|api[_-]?key|token|secret|password)[\s:=]+([a-z0-9_\-.]{12,})(?:\s|'|\"|`|$|\\n)'''
+  tags = ["key", "api", "token", "secret"]
+
+[[rules]]
+  description = "Hugging Face Token"
+  id = "hf-token"
+  regex = '''(?:^|\W)hf_[a-zA-Z0-9]{34}(?:$|\W)'''
+  tags = ["key", "api", "huggingface"]
+
+[[rules]]
+  description = "GitHub Token"
+  id = "github-token"
+  regex = '''(?:^|\W)gh[pousr]_[A-Za-z0-9_]{36,255}(?:$|\W)'''
+  tags = ["key", "api", "github"]
+
+[[rules]]
+  description = "AWS Access Key"
+  id = "aws-access-key"
+  regex = '''(A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}'''
+  tags = ["key", "aws"]
+
+[[rules]]
+  description = "SSH RSA Private Key"
+  id = "ssh-rsa-key"
+  regex = '''-----BEGIN (RSA|DSA|EC|OPENSSH) PRIVATE KEY-----'''
+  tags = ["key", "ssh"]
