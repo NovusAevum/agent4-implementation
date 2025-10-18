@@ -1,0 +1,16 @@
+# These are supported funding model platforms
+github: novusaevum  # Replace with your GitHub Sponsors username
+twitter: novusaevum  # Replace with your Twitter username without the @
+custom: https://www.buymeacoffee.com/novusaevum  # Replace with your custom funding URL
+
+# You can also specify multiple platforms
+# github: [novusaevum, another-username]
+# patreon: novusaevum
+# open_collective: novusaevum
+# ko_fi: novusaevum
+# tidelift: npm/package-name
+# community_bridge: project-id
+# liberapay: novusaevum
+# issuehunt: novusaevum
+# otechie: novusaevum
+# custom: ['https://paypal.me/novusaevum', 'https://www.patreon.com/novusaevum']

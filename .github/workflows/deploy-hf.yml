@@ -1,0 +1,99 @@
+name: Deploy to Hugging Face Spaces
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+env:
+  DOCKER_IMAGE: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:latest
+  HF_SPACE: ${{ github.repository_owner }}/${{ github.event.repository.name }}
+  HF_TOKEN: ${{ secrets.HF_TOKEN }}
+  HF_USERNAME: ${{ secrets.HF_USERNAME }}
+  
+  # LLM Provider API Keys
+  HUGGINGFACE_API_KEY: ${{ secrets.HUGGINGFACE_API_KEY }}
+  ALIBABA_QWEN_API_KEY: ${{ secrets.ALIBABA_QWEN_API_KEY }}
+  KIMI_API_KEY: ${{ secrets.KIMI_API_KEY }}
+  MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+  DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+  OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+  CODESTRAL_API_KEY: ${{ secrets.CODESTRAL_API_KEY }}
+  
+  # App Configuration
+  PORT: 3000
+  NODE_ENV: production
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+      
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        tags: ${{ env.DOCKER_IMAGE }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        build-args: |
+          NODE_ENV=production
+          
+    - name: Deploy to Hugging Face Spaces
+      uses: hf-actions/deploy-to-space@v1
+      with:
+        space: ${{ env.HF_SPACE }}
+        docker_username: ${{ github.actor }}
+        docker_password: ${{ secrets.GITHUB_TOKEN }}
+        docker_image: ${{ env.DOCKER_IMAGE }}
+        space_sdk: docker
+        env_vars: |
+          HUGGINGFACE_API_KEY=${{ env.HUGGINGFACE_API_KEY }}
+          ALIBABA_QWEN_API_KEY=${{ env.ALIBABA_QWEN_API_KEY }}
+          KIMI_API_KEY=${{ env.KIMI_API_KEY }}
+          MISTRAL_API_KEY=${{ env.MISTRAL_API_KEY }}
+          DEEPSEEK_API_KEY=${{ env.DEEPSEEK_API_KEY }}
+          OPENROUTER_API_KEY=${{ env.OPENROUTER_API_KEY }}
+          CODESTRAL_API_KEY=${{ env.CODESTRAL_API_KEY }}
+          PORT=${{ env.PORT }}
+          NODE_ENV=${{ env.NODE_ENV }}
+          
+    - name: Verify Deployment
+      run: |
+        echo "Deployment to Hugging Face Spaces initiated!"
+        echo "View your space at: https://huggingface.co/spaces/${{ env.HF_SPACE }}"
+        
+    - name: Update README with Space URL
+      if: success()
+      run: |
+        SPACE_URL="https://huggingface.co/spaces/${{ env.HF_SPACE }}"
+        echo "## 🚀 Live Demo" >> README.md
+        echo "" >> README.md
+        echo "The application is deployed to Hugging Face Spaces:" >> README.md
+        echo "" >> README.md
+        echo "[![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/${{ env.HF_SPACE }})" >> README.md
+        echo "" >> README.md
+        echo "🔗 [Open in Spaces]($SPACE_URL)" >> README.md
+        
+        git config --global user.name 'GitHub Actions'
+        git config --global user.email 'actions@github.com'
+        git add README.md
+        git commit -m "docs: Update README with Hugging Face Space URL" || echo "No changes to commit"
+        git push || echo "No changes to push"
