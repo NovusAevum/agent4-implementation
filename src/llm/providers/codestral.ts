@@ -1,5 +1,5 @@
 import { BaseProvider } from './base';
-import fetch from 'node-fetch';
+import axios from 'axios';
 
 export class CodestralProvider extends BaseProvider {
   private readonly apiUrl: string;
@@ -35,23 +35,14 @@ export class CodestralProvider extends BaseProvider {
     };
 
     try {
-      const response = await fetch(this.apiUrl, {
-        method: 'POST',
+      const response = await axios.post(this.apiUrl, data, {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${this.apiKey}`,
         },
-        body: JSON.stringify(data),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          `Codestral API error (${response.status}): ${(errorData as any)?.error?.message || response.statusText}`
-        );
-      }
-
-      const result = (await response.json()) as any;
+      const result = response.data as any;
       return result.choices[0]?.message || result.choices[0]?.text || '';
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
