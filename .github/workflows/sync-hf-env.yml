@@ -1,0 +1,73 @@
+name: Sync Env to Hugging Face
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *' # Daily at midnight
+
+jobs:
+  sync-env:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Sync environment variables to Hugging Face
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_USERNAME: ${{ secrets.HF_USERNAME }}
+          SPACE_NAME: agent4-implementation
+        run: |
+          echo "Syncing environment variables to Hugging Face Space: $HF_USERNAME/$SPACE_NAME"
+          
+          # Install huggingface_hub
+          pip install huggingface_hub
+          
+          # Create Python script to update space variables
+          cat > update_space.py << 'EOF'
+          import os
+          from huggingface_hub import HfApi
+
+          api = HfApi()
+          token = os.environ.get('HF_TOKEN')
+          username = os.environ.get('HF_USERNAME', 'LetsTryGPT')
+          space_name = os.environ.get('SPACE_NAME', 'agent4-implementation')
+          repo_id = f"{username}/{space_name}"
+
+          # Variables to sync
+          variables = {
+              'NODE_ENV': 'production',
+              'PORT': '3000',
+              'DEFAULT_LLM_PROVIDER': 'continue',
+              'FALLBACK_ORDER': 'continue,alibaba,kimi,codestral',
+              'AGENT4_ENABLED': 'true',
+              'WORKFLOW_MODE': '4-phase'
+          }
+
+          try:
+              for key, value in variables.items():
+                  print(f"Setting {key}...")
+                  api.add_space_variable(
+                      repo_id=repo_id,
+                      key=key,
+                      value=value,
+                      token=token
+                  )
+              print(f"✅ Successfully synced {len(variables)} variables to {repo_id}")
+          except Exception as e:
+              print(f"❌ Error syncing variables: {e}")
+              exit(1)
+          EOF
+          
+          # Run the script
+          python update_space.py
+
+      - name: Verify sync
+        run: |
+          echo "✅ Environment variables synced successfully"
+          echo "📦 Repository: https://huggingface.co/${{ secrets.HF_USERNAME }}/agent4-implementation"
