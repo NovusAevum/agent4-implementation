@@ -26,7 +26,7 @@ describe('HuggingFaceProvider', () => {
 
       const prompt = 'Test prompt';
       const options = { max_tokens: 50 };
-      
+
       const result = await provider.generate(prompt, options);
 
       expect(global.fetch).toHaveBeenCalledWith(
@@ -35,7 +35,7 @@ describe('HuggingFaceProvider', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${mockApiKey}`,
+            Authorization: `Bearer ${mockApiKey}`,
           },
           body: JSON.stringify({
             inputs: prompt,
@@ -60,7 +60,9 @@ describe('HuggingFaceProvider', () => {
         }),
       });
 
-      await expect(provider.generate('test')).rejects.toThrow('API request failed with status 500: Internal server error');
+      await expect(provider.generate('test')).rejects.toThrow(
+        'API request failed with status 500: Internal server error'
+      );
     });
   });
 

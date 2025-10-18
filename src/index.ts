@@ -23,7 +23,7 @@ app.get('/health', (_req: Request, res: Response) => {
 // Main Agent4 API endpoint
 app.post('/api/agent4/execute', async (req: Request, res: Response) => {
   const { task, context = {} } = req.body;
-  
+
   if (!task) {
     res.status(400).json({
       success: false,
@@ -35,7 +35,7 @@ app.post('/api/agent4/execute', async (req: Request, res: Response) => {
   try {
     const agent = new Agent4Workflow();
     const result = await agent.run(task, context);
-    
+
     res.json({
       success: true,
       data: result,

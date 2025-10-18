@@ -12,27 +12,27 @@ const PROVIDER_CONFIG = {
   huggingface: {
     model: 'mistralai/Mistral-7B-Instruct-v0.1',
     apiUrl: 'https://api-inference.huggingface.co/models',
-    envVar: 'HF_TOKEN'
+    envVar: 'HF_TOKEN',
   },
   alibaba_qwen: {
     model: 'Qwen/Qwen1.5-72B-Chat',
     apiUrl: 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
-    envVar: 'ALIBABA_QWEN_API_KEY'
+    envVar: 'ALIBABA_QWEN_API_KEY',
   },
   kimi: {
     model: 'kimi-2-8b',
     apiUrl: 'https://api.moonshot.cn/v1/chat/completions',
-    envVar: 'KIMI_API_KEY'
+    envVar: 'KIMI_API_KEY',
   },
   mistral: {
     model: 'mistral-small-latest',
     apiUrl: 'https://api.mistral.ai/v1/chat/completions',
-    envVar: 'MISTRAL_API_KEY'
+    envVar: 'MISTRAL_API_KEY',
   },
   deepseek: {
     model: 'deepseek-coder-33b-instruct',
     apiUrl: 'https://api.deepseek.com/v1/chat/completions',
-    envVar: 'DEEPSEEK_API_KEY'
+    envVar: 'DEEPSEEK_API_KEY',
   },
   openrouter: {
     model: 'mistralai/mistral-7b-instruct',
@@ -40,14 +40,14 @@ const PROVIDER_CONFIG = {
     envVar: 'OPENROUTER_API_KEY',
     headers: {
       'HTTP-Referer': 'https://github.com/your-username/agent4-implementation',
-      'X-Title': 'Agent4 Implementation'
-    }
+      'X-Title': 'Agent4 Implementation',
+    },
   },
   codestral: {
     model: 'codestral-latest',
     apiUrl: 'https://api.mistral.ai/v1/chat/completions',
-    envVar: 'MISTRAL_API_KEY' // Reusing Mistral's API key as per their documentation
-  }
+    envVar: 'MISTRAL_API_KEY', // Reusing Mistral's API key as per their documentation
+  },
 } as const;
 
 type ProviderName = keyof typeof PROVIDER_CONFIG | 'mock';
@@ -73,34 +73,37 @@ export class FallbackLLM {
   private healthCheckInterval: NodeJS.Timeout | null = null;
 
   constructor() {
-    this.initialize().catch(error => {
+    this.initialize().catch((error) => {
       console.error('Failed to initialize FallbackLLM:', error);
     });
   }
 
   private async initialize(): Promise<void> {
     if (this.initialized) return;
-    
+
     if (!this.initializationPromise) {
       this.initializationPromise = this.initializeProviders()
         .then(() => {
           this.initialized = true;
           this.startHealthChecks();
         })
-        .catch(error => {
+        .catch((error) => {
           console.error('Failed to initialize providers:', error);
           throw error;
         });
     }
-    
+
     await this.initializationPromise;
   }
 
   private startHealthChecks(): void {
     // Run health check every 5 minutes
-    this.healthCheckInterval = setInterval(async () => {
-      await this.checkAllProvidersHealth();
-    }, 5 * 60 * 1000);
+    this.healthCheckInterval = setInterval(
+      async () => {
+        await this.checkAllProvidersHealth();
+      },
+      5 * 60 * 1000
+    );
   }
 
   private async checkAllProvidersHealth(): Promise<void> {
@@ -119,7 +122,7 @@ export class FallbackLLM {
       })
     );
   }
-  
+
   // Remove unused method
   // private stopHealthChecks(): void {
   //   if (this.healthCheckInterval) {
@@ -131,85 +134,81 @@ export class FallbackLLM {
   private async initializeProviders(): Promise<void> {
     try {
       // Get the list of providers in order of preference
-      const providerOrder = (Array.isArray(config.FALLBACK_ORDER) 
-        ? config.FALLBACK_ORDER 
-        : String(config.FALLBACK_ORDER).split(',').map((p: string) => p.trim().toLowerCase() as ProviderName)
+      const providerOrder = (
+        Array.isArray(config.FALLBACK_ORDER)
+          ? config.FALLBACK_ORDER
+          : String(config.FALLBACK_ORDER)
+              .split(',')
+              .map((p: string) => p.trim().toLowerCase() as ProviderName)
       ).filter((name): name is ProviderName => name in PROVIDER_CONFIG);
-      
+
       // If no valid providers are specified, use a default fallback order
-      const effectiveProviderOrder = providerOrder.length > 0 ? providerOrder : ['huggingface', 'mock'];
-      
+      const effectiveProviderOrder =
+        providerOrder.length > 0 ? providerOrder : ['huggingface', 'mock'];
+
       // Initialize providers with their respective configurations
       const providers = await Promise.all(
         effectiveProviderOrder.map(async (providerName, index) => {
           try {
             const providerConfig = PROVIDER_CONFIG[providerName as keyof typeof PROVIDER_CONFIG];
             const apiKey = config[providerConfig.envVar as keyof typeof config] as string;
-            
+
             if (!apiKey && providerName !== 'mock') {
               console.warn(`No API key found for provider: ${providerName}`);
               return null;
             }
-            
+
             let provider: LLMProvider;
-            
+
             switch (providerName) {
               case 'huggingface':
-                const hfConfig = providerConfig as typeof PROVIDER_CONFIG['huggingface'];
-                provider = new HuggingFaceProvider(
-                  apiKey,
-                  hfConfig.model,
-                  hfConfig.apiUrl
-                );
+                const hfConfig = providerConfig as (typeof PROVIDER_CONFIG)['huggingface'];
+                provider = new HuggingFaceProvider(apiKey, hfConfig.model, hfConfig.apiUrl);
                 break;
-                
+
               case 'mistral':
-                const mistralConfig = providerConfig as typeof PROVIDER_CONFIG['mistral'];
-                provider = new MistralProvider(
-                  apiKey,
-                  mistralConfig.model,
-                  mistralConfig.apiUrl
-                );
+                const mistralConfig = providerConfig as (typeof PROVIDER_CONFIG)['mistral'];
+                provider = new MistralProvider(apiKey, mistralConfig.model, mistralConfig.apiUrl);
                 break;
-                
+
               case 'deepseek':
-                const deepseekConfig = providerConfig as typeof PROVIDER_CONFIG['deepseek'];
+                const deepseekConfig = providerConfig as (typeof PROVIDER_CONFIG)['deepseek'];
                 provider = new DeepSeekProvider(
                   apiKey,
                   deepseekConfig.model,
                   deepseekConfig.apiUrl
                 );
                 break;
-                
+
               case 'openrouter':
-                const openrouterConfig = providerConfig as typeof PROVIDER_CONFIG['openrouter'];
+                const openrouterConfig = providerConfig as (typeof PROVIDER_CONFIG)['openrouter'];
                 provider = new OpenRouterProvider(
                   apiKey,
                   openrouterConfig.model,
                   openrouterConfig.apiUrl
                 );
                 break;
-                
+
               case 'codestral':
-                const codestralConfig = providerConfig as typeof PROVIDER_CONFIG['codestral'];
+                const codestralConfig = providerConfig as (typeof PROVIDER_CONFIG)['codestral'];
                 provider = new CodestralProvider(
                   apiKey,
                   codestralConfig.model,
                   codestralConfig.apiUrl
                 );
                 break;
-                
+
               case 'mock':
                 provider = new MockProvider();
                 break;
-                
+
               default:
                 console.warn(`Provider ${providerName} not yet implemented`);
                 return null;
             }
-            
+
             const isHealthy = await provider.checkHealth().catch(() => false);
-            
+
             return {
               name: providerName,
               provider,
@@ -219,7 +218,7 @@ export class FallbackLLM {
               errorCount: 0,
               lastUsed: 0,
               totalRequests: 0,
-              failedRequests: 0
+              failedRequests: 0,
             };
           } catch (error) {
             console.error(`Failed to initialize provider ${providerName}:`, error);
@@ -227,18 +226,18 @@ export class FallbackLLM {
           }
         })
       );
-      
+
       // Filter out any null providers (failed to initialize)
       this.providers = providers.filter((p): p is NonNullable<typeof p> => p !== null);
-      
+
       if (this.providers.length === 0) {
         throw new Error('No valid LLM providers could be initialized');
       }
-      
-      console.log(`Initialized ${this.providers.length} LLM provider(s):`, 
-        this.providers.map(p => `${p.name} (${p.isHealthy ? 'healthy' : 'unhealthy'})`).join(', ')
+
+      console.log(
+        `Initialized ${this.providers.length} LLM provider(s):`,
+        this.providers.map((p) => `${p.name} (${p.isHealthy ? 'healthy' : 'unhealthy'})`).join(', ')
       );
-      
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('Error initializing providers:', errorMessage);
@@ -254,7 +253,7 @@ export class FallbackLLM {
     }
 
     let lastError: Error | null = null;
-    
+
     // Try each provider in order
     for (const { name, provider } of this.providers) {
       try {

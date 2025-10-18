@@ -14,7 +14,7 @@ const envSchema = z.object({
   CODESTRAL_API_KEY: z.string().optional(),
   CONTINUE_API_KEY: z.string().optional(),
   CODECOPILOT_KEY: z.string().optional(),
-  
+
   // Configuration
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.string().default('3000'),

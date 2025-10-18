@@ -16,22 +16,15 @@ export class DeepSeekProvider extends BaseProvider {
   }
 
   async generate(prompt: string, options: any = {}): Promise<string> {
-    const {
-      max_tokens = 2048,
-      temperature = 0.7,
-      top_p = 1.0,
-      ...otherOptions
-    } = options;
+    const { max_tokens = 2048, temperature = 0.7, top_p = 1.0, ...otherOptions } = options;
 
     const data = {
       model: this.model,
-      messages: [
-        { role: 'user', content: prompt }
-      ],
+      messages: [{ role: 'user', content: prompt }],
       max_tokens,
       temperature,
       top_p,
-      ...otherOptions
+      ...otherOptions,
     };
 
     try {
@@ -39,9 +32,9 @@ export class DeepSeekProvider extends BaseProvider {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
+          Authorization: `Bearer ${this.apiKey}`,
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
       });
 
       if (!response.ok) {
@@ -51,7 +44,7 @@ export class DeepSeekProvider extends BaseProvider {
         );
       }
 
-      const result = await response.json() as any;
+      const result = (await response.json()) as any;
       return result.choices[0]?.message?.content || '';
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';

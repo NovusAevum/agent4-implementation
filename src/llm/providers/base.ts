@@ -7,7 +7,7 @@ export abstract class BaseProvider implements LLMProvider {
   constructor(protected apiKey: string) {}
 
   abstract generate(prompt: string, options?: any): Promise<string>;
-  
+
   async checkHealth(): Promise<boolean> {
     try {
       await this.generate('Test connection', { max_tokens: 1 });

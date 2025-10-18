@@ -31,7 +31,7 @@ export class CodestralProvider extends BaseProvider {
       max_tokens,
       temperature,
       top_p,
-      ...otherOptions
+      ...otherOptions,
     };
 
     try {
@@ -39,9 +39,9 @@ export class CodestralProvider extends BaseProvider {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
+          Authorization: `Bearer ${this.apiKey}`,
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
       });
 
       if (!response.ok) {
@@ -51,7 +51,7 @@ export class CodestralProvider extends BaseProvider {
         );
       }
 
-      const result = await response.json() as any;
+      const result = (await response.json()) as any;
       return result.choices[0]?.message || result.choices[0]?.text || '';
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';

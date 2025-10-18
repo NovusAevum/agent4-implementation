@@ -1,7 +1,8 @@
 import { BaseProvider } from './base';
 
 export class AlibabaProvider extends BaseProvider {
-  private readonly baseUrl = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation';
+  private readonly baseUrl =
+    'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation';
 
   async generate(prompt: string, options: any = {}): Promise<string> {
     const response = await this.makeRequest(
@@ -18,7 +19,7 @@ export class AlibabaProvider extends BaseProvider {
         },
       },
       {
-        'Authorization': `Bearer ${this.apiKey}`,
+        Authorization: `Bearer ${this.apiKey}`,
         'X-DashScope-SSE': 'enable',
       }
     );
@@ -30,7 +31,7 @@ export class AlibabaProvider extends BaseProvider {
     try {
       const response = await fetch('https://dashscope.aliyuncs.com/api/v1/status', {
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          Authorization: `Bearer ${this.apiKey}`,
         },
       });
       return response.ok;

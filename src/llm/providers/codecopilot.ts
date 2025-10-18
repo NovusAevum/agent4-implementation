@@ -19,7 +19,7 @@ export class CodeCopilotProvider extends BaseProvider {
         ...options,
       },
       {
-        'Authorization': `Bearer ${this.apiKey}`,
+        Authorization: `Bearer ${this.apiKey}`,
       }
     );
 
@@ -30,7 +30,7 @@ export class CodeCopilotProvider extends BaseProvider {
     try {
       const response = await fetch(`${this.baseUrl}/models`, {
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          Authorization: `Bearer ${this.apiKey}`,
         },
       });
       return response.ok;

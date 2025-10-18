@@ -22,20 +22,20 @@ export class HuggingFaceProvider extends BaseProvider {
 
   private async makeRequestWithRetry(url: string, options: any): Promise<any> {
     let lastError: Error | null = null;
-    
+
     for (let attempt = 0; attempt < this.maxRetries; attempt++) {
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), this.timeout);
-        
+
         const response = await fetch(url, {
           ...options,
           signal: controller.signal,
           headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
+            Authorization: `Bearer ${this.apiKey}`,
             'Content-Type': 'application/json',
-            ...(options.headers || {})
-          }
+            ...(options.headers || {}),
+          },
         });
         clearTimeout(timeoutId);
 
@@ -51,23 +51,18 @@ export class HuggingFaceProvider extends BaseProvider {
         return await response.json();
       } catch (error: any) {
         lastError = error;
-        
+
         const backoff = this.initialBackoff * Math.pow(2, attempt);
         console.warn(`Attempt ${attempt + 1} failed, retrying in ${backoff}ms...`, error.message);
-        await new Promise(resolve => setTimeout(resolve, backoff));
+        await new Promise((resolve) => setTimeout(resolve, backoff));
       }
     }
-    
+
     throw lastError || new Error('Request failed after all retries');
   }
 
   async generate(prompt: string, options: any = {}): Promise<string> {
-    const {
-      max_tokens = 500,
-      temperature = 0.7,
-      top_p = 0.9,
-      ...otherOptions
-    } = options;
+    const { max_tokens = 500, temperature = 0.7, top_p = 0.9, ...otherOptions } = options;
 
     const data = {
       inputs: prompt,
@@ -76,20 +71,20 @@ export class HuggingFaceProvider extends BaseProvider {
         temperature,
         top_p,
         return_full_text: false,
-        ...otherOptions
-      }
+        ...otherOptions,
+      },
     };
 
     try {
       const response = await this.makeRequestWithRetry(this.apiUrl, {
         method: 'POST',
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
       });
 
       if (Array.isArray(response) && response[0]?.generated_text) {
         return response[0].generated_text;
       }
-      
+
       throw new Error('Unexpected response format from Hugging Face API');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -102,13 +97,13 @@ export class HuggingFaceProvider extends BaseProvider {
     try {
       // Check if the model is ready
       const response = await fetch(this.apiUrl, {
-        headers: { 'Authorization': `Bearer ${this.apiKey}` }
+        headers: { Authorization: `Bearer ${this.apiKey}` },
       });
-      
+
       if (!response.ok) {
         throw new Error(`API returned status ${response.status}`);
       }
-      
+
       return true;
     } catch (error) {
       console.error('Hugging Face health check failed:', error);
