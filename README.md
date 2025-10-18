@@ -21,6 +21,27 @@
 
 ---
 
+## 🚀 Live Deployment
+
+<div align="center">
+
+### 🤗 Hugging Face Space
+
+**[View Live Demo →](https://huggingface.co/spaces/LetsTryGPT/agent4-implementation)**
+
+The application is deployed and running on Hugging Face Spaces with Docker SDK.
+
+[![Open in Spaces](https://huggingface.co/datasets/huggingface/badges/raw/main/open-in-hf-spaces-md.svg)](https://huggingface.co/spaces/LetsTryGPT/agent4-implementation)
+
+**Deployment Status:** ✅ Active  
+**Last Updated:** October 19, 2025  
+**Runtime:** Docker Container  
+**Port:** 7860
+
+</div>
+
+---
+
 ## 📋 Table of Contents
 
 - [Overview](#-overview)
@@ -434,22 +455,94 @@ git push hf main
 
 ### CI/CD Pipeline
 
-The project includes a comprehensive CI/CD pipeline:
+The project includes a comprehensive CI/CD pipeline with automated deployment to Hugging Face Spaces:
 
 ```mermaid
-graph LR
-    A[Push to GitHub] --> B[Run Tests]
-    B --> C[Security Scan]
-    C --> D[Build Docker Image]
-    D --> E[Deploy to HF Spaces]
-    E --> F[Verify Deployment]
+graph TB
+    subgraph "Development"
+        A[Code Push] --> B[GitHub Actions]
+    end
     
-    style A fill:#f9f
-    style B fill:#bbf
-    style C fill:#fbb
-    style D fill:#bfb
-    style E fill:#fbf
-    style F fill:#bff
+    subgraph "CI Pipeline"
+        B --> C{Lint Check}
+        C -->|Pass| D{Security Scan}
+        C -->|Fail| Z[Notify Developer]
+        D -->|Pass| E{Build & Test}
+        D -->|Fail| Z
+        E -->|Pass| F[Build Docker Image]
+        E -->|Fail| Z
+    end
+    
+    subgraph "CD Pipeline"
+        F --> G[Push to Registry]
+        G --> H{Deploy to HF Spaces}
+        H -->|Success| I[Health Check]
+        H -->|Fail| J[Rollback]
+        I -->|Pass| K[✅ Deployment Complete]
+        I -->|Fail| J
+        J --> Z
+    end
+    
+    subgraph "Production"
+        K --> L[🤗 Live on HF Spaces]
+        L --> M[Monitor & Logs]
+    end
+    
+    style A fill:#e1f5ff,stroke:#01579b
+    style C fill:#fff3e0,stroke:#e65100
+    style D fill:#f3e5f5,stroke:#4a148c
+    style E fill:#e8f5e9,stroke:#2e7d32
+    style F fill:#fce4ec,stroke:#880e4f
+    style K fill:#c8e6c9,stroke:#388e3c,stroke-width:3px
+    style L fill:#81c784,stroke:#2e7d32,stroke-width:3px
+    style Z fill:#ffcdd2,stroke:#c62828
+```
+
+### Deployment Flow
+
+```mermaid
+sequenceDiagram
+    participant Dev as Developer
+    participant GH as GitHub
+    participant CI as CI/CD Pipeline
+    participant Docker as Docker Registry
+    participant HF as Hugging Face Spaces
+    
+    Dev->>GH: git push main
+    GH->>CI: Trigger Workflow
+    
+    rect rgba(33, 150, 243, 0.1)
+    Note over CI: Lint & Security
+    CI->>CI: ESLint Check
+    CI->>CI: CodeQL Scan
+    CI->>CI: Secret Detection
+    end
+    
+    rect rgba(76, 175, 80, 0.1)
+    Note over CI,Docker: Build Phase
+    CI->>CI: npm install
+    CI->>CI: npm run build
+    CI->>Docker: Build Docker Image
+    Docker-->>CI: Image Ready
+    end
+    
+    rect rgba(255, 152, 0, 0.1)
+    Note over CI,HF: Deploy Phase
+    CI->>HF: Upload Files
+    CI->>HF: Set Environment Variables
+    HF->>HF: Build Container
+    HF->>HF: Start Application
+    end
+    
+    rect rgba(156, 39, 176, 0.1)
+    Note over HF: Verification
+    HF->>HF: Health Check
+    HF->>HF: Monitor Logs
+    HF-->>CI: Deployment Status
+    end
+    
+    CI-->>GH: Update Status
+    GH-->>Dev: Notification ✅
 ```
 
 ## 🧪 Testing
