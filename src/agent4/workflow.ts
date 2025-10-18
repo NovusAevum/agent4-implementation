@@ -23,7 +23,7 @@ export type WorkflowState = {
     phase: string;
     state: any;
   }>;
-}
+};
 
 export class Agent4Workflow {
   private llm: FallbackLLM;
@@ -165,15 +165,15 @@ Provide a structured JSON response with the validation results.`;
 
       const validation = await this.llm.generate(prompt, { max_tokens: 2000 });
       const parsedValidation = this.safeJsonParse(validation);
-      
-      await this.updateState({ 
+
+      await this.updateState({
         validation: parsedValidation,
         metadata: {
           ...this.state.metadata,
           endTime: Date.now(),
         },
       });
-      
+
       this.addCompletedStep('validate');
       return parsedValidation;
     } catch (error) {
@@ -189,7 +189,7 @@ Provide a structured JSON response with the validation results.`;
       await this.discover(context);
       await this.execute([{ task }]);
       await this.validate();
-      
+
       return this.getState();
     } catch (error) {
       console.error('Workflow execution failed:', error);

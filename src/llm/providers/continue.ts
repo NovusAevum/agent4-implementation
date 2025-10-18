@@ -14,7 +14,7 @@ export class ContinueProvider extends BaseProvider {
         ...options,
       },
       {
-        'Authorization': `Bearer ${this.apiKey}`,
+        Authorization: `Bearer ${this.apiKey}`,
       }
     );
 
@@ -25,7 +25,7 @@ export class ContinueProvider extends BaseProvider {
     try {
       const response = await fetch(`${this.baseUrl}/health`, {
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          Authorization: `Bearer ${this.apiKey}`,
         },
       });
       return response.ok;

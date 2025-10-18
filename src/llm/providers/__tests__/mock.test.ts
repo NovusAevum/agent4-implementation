@@ -23,15 +23,13 @@ describe('MockProvider', () => {
     it('should return a mock response', async () => {
       const prompt = 'Test prompt';
       const response = await provider.generate(prompt);
-      
+
       expect(typeof response).toBe('string');
       expect(response).toContain(prompt);
     });
 
     it('should throw an error for empty prompt', async () => {
-      await expect(provider.generate(''))
-        .rejects
-        .toThrow('Prompt cannot be empty');
+      await expect(provider.generate('')).rejects.toThrow('Prompt cannot be empty');
     });
   });
 });

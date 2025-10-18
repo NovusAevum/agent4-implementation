@@ -18,7 +18,7 @@ beforeAll(() => {
 afterAll(() => {
   // Restore original console methods
   jest.restoreAllMocks();
-  
+
   // Restore environment variables
   delete process.env.NODE_ENV;
   delete process.env.FALLBACK_ORDER;
@@ -36,5 +36,5 @@ export const testConfig = {
   ALIBABA_QWEN_API_KEY: '',
   KIMI_API_KEY: '',
   CODECOPILOT_KEY: '',
-  HF_TOKEN: ''
+  HF_TOKEN: '',
 };
