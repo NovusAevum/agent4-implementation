@@ -45,7 +45,7 @@ USER myuser
 
 # Set environment variables
 ENV NODE_ENV=production
-ENV PORT=3000
+ENV PORT=7860
 ENV NPM_CONFIG_UPDATE_NOTIFIER=false
 ENV NPM_CONFIG_AUDIT=false
 ENV NPM_CONFIG_FUND=false
@@ -66,10 +66,10 @@ RUN echo 'const express = require("express"); const app = express(); app.get("/h
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s \
-  CMD curl -f http://localhost:3000/health || exit 1
+  CMD curl -f http://localhost:7860/health || exit 1
 
 # Expose the port the app runs on
-EXPOSE 3000
+EXPOSE 7860
 
 # Command to run the application
 CMD ["node", "dist/index.js"]
