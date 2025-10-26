@@ -43,9 +43,7 @@ export class HuggingFaceProvider extends BaseProvider {
 
         // If it's not a retryable error, throw immediately
         if (!this.isRetryableError(error)) {
-          throw new Error(
-            `HuggingFace API error: ${error.message || 'Unknown error'}`
-          );
+          throw new Error(`HuggingFace API error: ${error.message || 'Unknown error'}`);
         }
 
         // Don't wait after the last attempt
@@ -56,9 +54,7 @@ export class HuggingFaceProvider extends BaseProvider {
       }
     }
 
-    throw new Error(
-      `HuggingFace API error after ${this.maxRetries} attempts: ${lastError?.message || 'Unknown error'}`
-    );
+    throw new Error(`HuggingFace API error after ${this.maxRetries} attempts: ${lastError?.message || 'Unknown error'}`);
   }
 
   private isRetryableError(error: any): boolean {
