@@ -29,27 +29,14 @@ export class MistralProvider extends BaseProvider {
     try {
       const response = await axios.post(this.apiUrl, data, {
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          Authorization: `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
         },
       });
 
-      const result = response.data as any;
-      return result.choices[0]?.message?.content || '';
+      return response.data.choices[0].message.content;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Error calling Mistral API:', errorMessage);
-      throw new Error(`Failed to generate text: ${errorMessage}`);
-    }
-  }
-
-  async checkHealth(): Promise<boolean> {
-    try {
-      await this.generate('Test', { max_tokens: 10 });
-      return true;
-    } catch (error) {
-      console.error('Mistral health check failed:', error);
-      return false;
+      throw new Error(`Mistral API error: ${error}`);
     }
   }
 }
