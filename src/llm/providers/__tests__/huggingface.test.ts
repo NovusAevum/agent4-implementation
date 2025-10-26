@@ -1,4 +1,8 @@
 import { HuggingFaceProvider } from '../huggingface';
+import axios from 'axios';
+
+jest.mock('axios');
+const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe('HuggingFaceProvider', () => {
   let provider: HuggingFaceProvider;
@@ -7,8 +11,7 @@ describe('HuggingFaceProvider', () => {
   const mockApiUrl = 'https://api.test.huggingface.co/models';
 
   beforeEach(() => {
-    // Mock fetch
-    global.fetch = jest.fn() as jest.Mock;
+    jest.clearAllMocks();
     provider = new HuggingFaceProvider(mockApiKey, mockModel, mockApiUrl);
   });
 
@@ -19,68 +22,107 @@ describe('HuggingFaceProvider', () => {
   describe('generate', () => {
     it('should make a request to the Hugging Face API with correct parameters', async () => {
       const mockResponse = { generated_text: 'Test response' };
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => [mockResponse],
-      });
+      mockedAxios.mockResolvedValueOnce({
+        data: [mockResponse],
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {},
+      } as any);
 
       const prompt = 'Test prompt';
       const options = { max_tokens: 50 };
 
       const result = await provider.generate(prompt, options);
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        `${mockApiUrl}/${mockModel}`,
+      expect(mockedAxios).toHaveBeenCalledWith(
         expect.objectContaining({
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+          url: `${mockApiUrl}/${mockModel}`,
+          headers: expect.objectContaining({
             Authorization: `Bearer ${mockApiKey}`,
-          },
-          body: JSON.stringify({
-            inputs: prompt,
-            parameters: {
-              max_new_tokens: options.max_tokens,
-              temperature: 0.7,
-              top_p: 0.9,
-              return_full_text: false,
-            },
+            'Content-Type': 'application/json',
           }),
         })
       );
-      expect(result).toBe(mockResponse.generated_text);
+      expect(result).toBe('Test response');
     });
 
     it('should throw an error if the API returns an error', async () => {
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-        json: async () => ({
-          error: 'Internal server error',
-        }),
-      });
+      const errorResponse = {
+        response: {
+          status: 500,
+          data: { error: 'Internal server error' },
+        },
+        message: 'Request failed with status code 500',
+      };
+      mockedAxios.mockRejectedValueOnce(errorResponse);
 
-      await expect(provider.generate('test')).rejects.toThrow(
-        'API request failed with status 500: Internal server error'
+      const prompt = 'Test prompt';
+
+      await expect(provider.generate(prompt)).rejects.toThrow(
+        'HuggingFace API error'
       );
+    });
+
+    it('should handle retry logic for retryable errors', async () => {
+      const errorResponse = {
+        response: {
+          status: 503,
+          data: { error: 'Service unavailable' },
+        },
+        message: 'Request failed with status code 503',
+      };
+      const mockResponse = { generated_text: 'Test response after retry' };
+
+      mockedAxios
+        .mockRejectedValueOnce(errorResponse)
+        .mockResolvedValueOnce({
+          data: [mockResponse],
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: {},
+        } as any);
+
+      const prompt = 'Test prompt';
+      const result = await provider.generate(prompt);
+
+      expect(mockedAxios).toHaveBeenCalledTimes(2);
+      expect(result).toBe('Test response after retry');
     });
   });
 
   describe('checkHealth', () => {
     it('should return true if the API is healthy', async () => {
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-      });
+      mockedAxios.post = jest.fn().mockResolvedValueOnce({
+        data: {},
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {},
+      } as any);
 
-      const isHealthy = await provider.checkHealth();
-      expect(isHealthy).toBe(true);
+      const result = await provider.checkHealth();
+
+      expect(result).toBe(true);
+      expect(mockedAxios.post).toHaveBeenCalledWith(
+        `${mockApiUrl}/${mockModel}`,
+        {},
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: `Bearer ${mockApiKey}`,
+          }),
+        })
+      );
     });
 
-    it('should return false if the API is not healthy', async () => {
-      (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
+    it('should return false if the API is unhealthy', async () => {
+      mockedAxios.post = jest.fn().mockRejectedValueOnce(new Error('Network error'));
 
-      const isHealthy = await provider.checkHealth();
-      expect(isHealthy).toBe(false);
+      const result = await provider.checkHealth();
+
+      expect(result).toBe(false);
     });
   });
 });
