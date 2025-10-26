@@ -37,71 +37,83 @@ export class HuggingFaceProvider extends BaseProvider {
           timeout: this.timeout,
         });
 
-        if (response.status >= 400) {
-          const errorData = response.data;
-          throw new Error(
-            `Hugging Face API error (${response.status}): ${
-              (errorData as any)?.error || response.statusText
-            }`
-          );
-        }
-
         return response.data;
       } catch (error: any) {
         lastError = error;
 
-        const backoff = this.initialBackoff * Math.pow(2, attempt);
-        console.warn(`Attempt ${attempt + 1} failed, retrying in ${backoff}ms...`, error.message);
-        await new Promise((resolve) => setTimeout(resolve, backoff));
+        // If it's not a retryable error, throw immediately
+        if (!this.isRetryableError(error)) {
+          throw new Error(
+            `HuggingFace API error: ${error.message || 'Unknown error'}`
+          );
+        }
+
+        // Don't wait after the last attempt
+        if (attempt < this.maxRetries - 1) {
+          const backoffTime = this.initialBackoff * Math.pow(2, attempt);
+          await new Promise((resolve) => setTimeout(resolve, backoffTime));
+        }
       }
     }
 
-    throw lastError || new Error('Request failed after all retries');
+    throw new Error(
+      `HuggingFace API error after ${this.maxRetries} attempts: ${lastError?.message || 'Unknown error'}`
+    );
+  }
+
+  private isRetryableError(error: any): boolean {
+    if (error.response) {
+      const status = error.response.status;
+      return status === 429 || status === 503 || status >= 500;
+    }
+    return error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT';
   }
 
   async generate(prompt: string, options: any = {}): Promise<string> {
-    const { maxTokens = 500, temperature = 0.7, top_p = 0.9, ...otherOptions } = options;
+    const {
+      max_new_tokens = 512,
+      temperature = 0.7,
+      top_p = 0.95,
+      repetition_penalty = 1.1,
+    } = options;
 
-    const data = {
-      inputs: prompt,
-      parameters: {
-        max_new_tokens: maxTokens,
-        temperature,
-        top_p,
-        return_full_text: false,
-        ...otherOptions,
+    const requestOptions = {
+      body: {
+        inputs: prompt,
+        parameters: {
+          max_new_tokens,
+          temperature,
+          top_p,
+          repetition_penalty,
+          return_full_text: false,
+        },
       },
     };
 
     try {
-      const response = await this.makeRequestWithRetry(this.apiUrl, {
-        body: data,
-      });
-
-      if (Array.isArray(response) && response[0]?.generated_text) {
-        return response[0].generated_text;
-      }
-
-      throw new Error('Unexpected response format from Hugging Face API');
+      const data = await this.makeRequestWithRetry(
+        this.apiUrl,
+        requestOptions
+      );
+      return data[0]?.generated_text || '';
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Error calling Hugging Face API:', errorMessage);
-      throw new Error(`Failed to generate text: ${errorMessage}`);
+      throw error;
     }
   }
 
   async checkHealth(): Promise<boolean> {
     try {
-      // Check if the model is ready
-      const response = await axios.post(this.apiUrl, {}, {
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-        },
-      });
-
+      const response = await axios.post(
+        this.apiUrl,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${this.apiKey}`,
+          },
+        }
+      );
       return response.status === 200;
     } catch (error) {
-      console.error('Hugging Face health check failed:', error);
       return false;
     }
   }
