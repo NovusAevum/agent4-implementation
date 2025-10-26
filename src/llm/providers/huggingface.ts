@@ -90,15 +90,8 @@ export class HuggingFaceProvider extends BaseProvider {
       },
     };
 
-    try {
-      const data = await this.makeRequestWithRetry(
-        this.apiUrl,
-        requestOptions
-      );
-      return data[0]?.generated_text || '';
-    } catch (error) {
-      throw error;
-    }
+    const data = await this.makeRequestWithRetry(this.apiUrl, requestOptions);
+    return data[0]?.generated_text || '';
   }
 
   async checkHealth(): Promise<boolean> {
