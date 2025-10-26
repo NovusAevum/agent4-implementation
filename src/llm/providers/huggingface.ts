@@ -54,7 +54,9 @@ export class HuggingFaceProvider extends BaseProvider {
       }
     }
 
-    throw new Error(`HuggingFace API error after ${this.maxRetries} attempts: ${lastError?.message || 'Unknown error'}`);
+    throw new Error(
+      `HuggingFace API error after ${this.maxRetries} attempts: ${lastError?.message || 'Unknown error'}`
+    );
   }
 
   private isRetryableError(error: any): boolean {
