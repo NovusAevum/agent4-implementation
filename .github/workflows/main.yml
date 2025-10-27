@@ -54,6 +54,16 @@ jobs:
             package-lock.json
             vercel.json
           retention-days: 7
+      - name: Calculate checksum
+        run: |
+          cd dist
+          sha256sum * > ../checksum.txt
+      - name: Upload checksum
+        uses: actions/upload-artifact@v4
+        with:
+          name: vercel-checksum
+          path: checksum.txt
+          retention-days: 7
 
   security:
     name: Security Scan
@@ -87,162 +97,16 @@ jobs:
           head: HEAD
 
   deploy:
-    name: Deploy to Hugging Face Spaces
+    uses: ./.github/workflows/deploy.yml
     needs: [validate, security]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          lfs: true
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            NODE_ENV=production
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install Hugging Face CLI
-        run: |
-          pip install --upgrade huggingface_hub
-
-      - name: Deploy to Hugging Face Space
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          CODESTRAL_API_KEY: ${{ secrets.CODESTRAL_API_KEY }}
-          ALIBABA_QWEN_API_KEY: ${{ secrets.ALIBABA_QWEN_API_KEY }}
-          KIMI_API_KEY: ${{ secrets.KIMI_API_KEY }}
-          CONTINUE_API_KEY: ${{ secrets.CONTINUE_API_KEY }}
-        run: |
-          # Configure git
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
-          
-          # Login to Hugging Face
-          huggingface-cli login --token $HF_TOKEN
-          
-          # Create or update the space
-          huggingface-cli repo create ${{ github.repository }} --type space --space_sdk docker || true
-          
-          # Clone the space repository
-          git clone https://huggingface.co/spaces/${{ github.repository }} hf-space || git clone https://huggingface.co/spaces/${{ github.repository_owner }}/agent4-implementation hf-space
-          
-          cd hf-space
-          
-          # Copy necessary files
-          cp -r ../Dockerfile ../huggingface.yaml ../package*.json ../tsconfig.json ../src ../dist ./ || cp -r ../* ./
-          
-          # Create README for HF Space
-          cat > README.md << 'EOF'
-          ---
-          title: Agent4 Multi-LLM
-          emoji: 🤖
-          colorFrom: blue
-          colorTo: green
-          sdk: docker
-          app_port: 3000
-          pinned: false
-          ---
-          
-          # Agent 4 Multi-LLM Implementation
-          
-          A robust multi-LLM AI agent with automatic fallback support.
-          
-          ## Features
-          - Multi-provider LLM support (Hugging Face, Mistral, DeepSeek, OpenRouter, Codestral)
-          - Automatic fallback mechanism
-          - Health monitoring
-          - REST API interface
-          
-          ## API Endpoint
-          POST /api/agent4/execute
-          EOF
-          
-          # Commit and push
-          git add .
-          git commit -m "Deploy from GitHub Actions" || echo "No changes to commit"
-          git push https://oauth2:${HF_TOKEN}@huggingface.co/spaces/${{ github.repository_owner }}/agent4-implementation main || git push https://oauth2:${HF_TOKEN}@huggingface.co/spaces/${{ github.repository }} main
-
-      - name: Verify deployment
-        run: |
-          echo "✅ Deployment to Hugging Face Spaces completed!"
-          echo "🔗 Space URL: https://huggingface.co/spaces/${{ github.repository }}"
-
-  deploy-vercel:
-    name: Deploy to Vercel
-    needs: [validate, security]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: vercel-deployment
-          path: .
-
-      - name: Install Vercel CLI
-        run: npm install --global vercel@latest
-
-      - name: Deploy to Vercel
-        run: |
-          vercel --prod --confirm --token ${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          CODESTRAL_API_KEY: ${{ secrets.CODESTRAL_API_KEY }}
-          ALIBABA_QWEN_API_KEY: ${{ secrets.ALIBABA_QWEN_API_KEY }}
-          KIMI_API_KEY: ${{ secrets.KIMI_API_KEY }}
-          CONTINUE_API_KEY: ${{ secrets.CONTINUE_API_KEY }}
+    with:
+      environment: production
+      huggingface_space: ${{ github.repository }}
+    secrets: inherit
 
   notify:
     name: Notify Deployment Status
-    needs: [deploy, deploy-vercel]
+    needs: [deploy]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -250,11 +114,5 @@ jobs:
         run: |
           echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Hugging Face Deployment" >> $GITHUB_STEP_SUMMARY
-          echo "- **Status**: ${{ needs.deploy.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Space**: https://huggingface.co/spaces/${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Docker Image**: ghcr.io/${{ github.repository }}:latest" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Vercel Deployment" >> $GITHUB_STEP_SUMMARY
-          echo "- **Status**: ${{ needs.deploy-vercel.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deployment Status**: ${{ needs.deploy.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
