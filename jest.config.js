@@ -15,6 +15,7 @@ module.exports = {
     }],
   },
   testPathIgnorePatterns: ['/node_modules/', '/dist/'],
+  modulePathIgnorePatterns: ['<rootDir>/dist/'],
   setupFilesAfterEnv: ['<rootDir>/src/test-setup.ts'],
   testTimeout: 10000,
   verbose: true,
