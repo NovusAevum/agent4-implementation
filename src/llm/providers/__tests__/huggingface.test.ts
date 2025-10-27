@@ -22,7 +22,7 @@ describe('HuggingFaceProvider', () => {
   describe('generate', () => {
     it('should make a request to the Hugging Face API with correct parameters', async () => {
       const mockResponse = { generated_text: 'Test response' };
-      mockedAxios.mockResolvedValueOnce({
+      mockedAxios.post.mockResolvedValueOnce({
         data: [mockResponse],
         status: 200,
         statusText: 'OK',
@@ -35,10 +35,10 @@ describe('HuggingFaceProvider', () => {
 
       const result = await provider.generate(prompt, options);
 
-      expect(mockedAxios).toHaveBeenCalledWith(
+      expect(mockedAxios.post).toHaveBeenCalledWith(
+        `${mockApiUrl}/${mockModel}`,
+        expect.any(Object),
         expect.objectContaining({
-          method: 'POST',
-          url: `${mockApiUrl}/${mockModel}`,
           headers: expect.objectContaining({
             Authorization: `Bearer ${mockApiKey}`,
             'Content-Type': 'application/json',
@@ -56,7 +56,7 @@ describe('HuggingFaceProvider', () => {
         },
         message: 'Request failed with status code 500',
       };
-      mockedAxios.mockRejectedValueOnce(errorResponse);
+      mockedAxios.post.mockRejectedValueOnce(errorResponse);
 
       const prompt = 'Test prompt';
 
@@ -75,7 +75,7 @@ describe('HuggingFaceProvider', () => {
       };
       const mockResponse = { generated_text: 'Test response after retry' };
 
-      mockedAxios
+      mockedAxios.post
         .mockRejectedValueOnce(errorResponse)
         .mockResolvedValueOnce({
           data: [mockResponse],
@@ -88,7 +88,7 @@ describe('HuggingFaceProvider', () => {
       const prompt = 'Test prompt';
       const result = await provider.generate(prompt);
 
-      expect(mockedAxios).toHaveBeenCalledTimes(2);
+      expect(mockedAxios.post).toHaveBeenCalledTimes(2);
       expect(result).toBe('Test response after retry');
     });
   });

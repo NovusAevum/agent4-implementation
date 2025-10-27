@@ -25,10 +25,7 @@ export class HuggingFaceProvider extends BaseProvider {
 
     for (let attempt = 0; attempt < this.maxRetries; attempt++) {
       try {
-        const response = await axios({
-          method: 'POST',
-          url,
-          data: options.body,
+        const response = await axios.post(url, options.body, {
           headers: {
             Authorization: `Bearer ${this.apiKey}`,
             'Content-Type': 'application/json',

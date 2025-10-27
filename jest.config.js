@@ -7,7 +7,12 @@ module.exports = {
   coverageReporters: ['text', 'lcov'],
   moduleFileExtensions: ['ts', 'js', 'json'],
   transform: {
-    '^.+\\.ts$': 'ts-jest',
+    '^.+\\.ts$': ['ts-jest', {
+      tsconfig: {
+        esModuleInterop: true,
+        allowSyntheticDefaultImports: true,
+      },
+    }],
   },
   testPathIgnorePatterns: ['/node_modules/', '/dist/'],
   setupFilesAfterEnv: ['<rootDir>/src/test-setup.ts'],
@@ -26,13 +31,5 @@ module.exports = {
   // Mock node-fetch for tests
   moduleNameMapper: {
     '^node-fetch$': '<rootDir>/node_modules/node-fetch/lib/index.js'
-  },
-  globals: {
-    'ts-jest': {
-      tsconfig: {
-        esModuleInterop: true,
-        allowSyntheticDefaultImports: true
-      }
-    }
   }
 };
