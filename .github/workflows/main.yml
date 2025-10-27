@@ -47,8 +47,12 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: dist
-          path: dist/
+          name: vercel-deployment
+          path: |
+            dist/
+            package.json
+            package-lock.json
+            vercel.json
           retention-days: 7
 
   security:
@@ -214,8 +218,8 @@ jobs:
       - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
-          name: dist
-          path: dist
+          name: vercel-deployment
+          path: .
 
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
@@ -246,7 +250,11 @@ jobs:
         run: |
           echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Hugging Face Deployment" >> $GITHUB_STEP_SUMMARY
           echo "- **Status**: ${{ needs.deploy.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Space**: https://huggingface.co/spaces/${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Docker Image**: ghcr.io/${{ github.repository }}:latest" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Vercel Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ needs.deploy-vercel.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
