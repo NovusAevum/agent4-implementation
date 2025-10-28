@@ -68,12 +68,8 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           huggingface-cli login --token $HF_TOKEN
-          git clone https://huggingface.co/spaces/${{ inputs.huggingface_space }} hf-space
-          cd hf-space
-          cp -r ../Dockerfile ../huggingface.yaml ../package.json ../package-lock.json ../tsconfig.json ../dist ./
-          git add .
-          git commit -m "Deploy from GitHub Actions" || echo "No changes to commit"
-          git push
+          huggingface-cli repo create ${{ inputs.huggingface_space }} --type space --space_sdk docker || true
+          huggingface-cli repo upload ${{ inputs.huggingface_space }} --repo-type space --from . --docker-image ghcr.io/${{ github.repository }}:${{ github.sha }}
 
   deploy-vercel:
     name: Deploy to Vercel

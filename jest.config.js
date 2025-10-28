@@ -1,36 +1,40 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  testMatch: ['**/__tests__/**/*.test.ts'],
+  roots: ['<rootDir>/src'],
+  testMatch: ['**/?(*.)+(spec|test).[jt]s?(x)'],
   collectCoverage: true,
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov'],
-  moduleFileExtensions: ['ts', 'js', 'json'],
-  transform: {
-    '^.+\\.ts$': ['ts-jest', {
-      tsconfig: {
-        esModuleInterop: true,
-        allowSyntheticDefaultImports: true,
-      },
-    }],
-  },
+  moduleFileExtensions: ['ts', 'js', 'json', 'node'],
   testPathIgnorePatterns: ['/node_modules/', '/dist/'],
   modulePathIgnorePatterns: ['<rootDir>/dist/'],
   setupFilesAfterEnv: ['<rootDir>/src/test-setup.ts'],
   testTimeout: 10000,
   verbose: true,
-  // Reset mocks between tests
   resetMocks: true,
-  // Clear mock calls between tests
   clearMocks: true,
-  // Reset modules between tests
   resetModules: true,
-  // Handle ESM modules like node-fetch
   transformIgnorePatterns: [
     'node_modules/(?!(node-fetch)/)'
   ],
-  // Mock node-fetch for tests
   moduleNameMapper: {
     '^node-fetch$': '<rootDir>/node_modules/node-fetch/lib/index.js'
-  }
+  },
+  coverageThreshold: {
+    global: {
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80,
+    },
+  },
+  coveragePathIgnorePatterns: [
+    '/node_modules/',
+    '/dist/',
+  ],
+  moduleDirectories: ['node_modules', 'src'],
+  testEnvironmentOptions: {
+    NODE_ENV: 'test',
+  },
 };
