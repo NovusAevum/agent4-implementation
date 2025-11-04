@@ -1,5 +1,5 @@
 // This file ensures test environment is properly set up
-import { config } from './config';
+import { config } from './config/index';
 
 // Set test environment variables
 process.env.NODE_ENV = 'test';

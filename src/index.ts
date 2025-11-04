@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
-import { config } from './config';
+import { config } from './config/index';
 import { Agent4Workflow } from './agent4/workflow';
 
 // Initialize Express app
