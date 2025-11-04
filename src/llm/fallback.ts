@@ -5,7 +5,7 @@ import { MistralProvider } from './providers/mistral';
 import { DeepSeekProvider } from './providers/deepseek';
 import { OpenRouterProvider } from './providers/openrouter';
 import { CodestralProvider } from './providers/codestral';
-import { config } from '../config';
+import { config } from '../config/index';
 
 // Provider configurations with all available models
 const PROVIDER_CONFIG = {
