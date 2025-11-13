@@ -61,12 +61,12 @@ export class FallbackLLM {
   private initialized = false;
   private initializationPromise: Promise<void> | null = null;
   private lastError: Error | null = null;
-  // @ts-ignore - Used for health checking interval management
-  private healthCheckInterval: NodeJS.Timeout | null = null;
+  private healthCheckInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
     this.initialize().catch((error) => {
       console.error('Failed to initialize FallbackLLM:', error);
+      this.lastError = error instanceof Error ? error : new Error(String(error));
     });
   }
 

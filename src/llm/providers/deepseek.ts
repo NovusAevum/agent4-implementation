@@ -33,6 +33,7 @@ export class DeepSeekProvider extends BaseProvider {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${this.apiKey}`,
         },
+        timeout: 30000, // 30 seconds
       });
 
       const result = response.data as any;

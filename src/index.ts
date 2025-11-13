@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { config } from './config/index';
 import { Agent4Workflow } from './agent4/workflow';
@@ -23,8 +24,27 @@ const executeRequestSchema = z.object({
 });
 
 // Middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: config.CORS_ORIGIN === '*' ? '*' : config.CORS_ORIGIN.split(','),
+    credentials: true,
+  })
+);
 app.use(express.json({ limit: '1mb' })); // Limit request body size
+
+// Rate limiting middleware
+const limiter = rateLimit({
+  windowMs: config.RATE_LIMIT_WINDOW_MS,
+  max: config.RATE_LIMIT_MAX_REQUESTS,
+  message: {
+    success: false,
+    error: 'Too many requests from this IP, please try again later.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/api/', limiter);
 
 // Health check endpoint
 app.get('/health', (_req: Request, res: Response) => {
@@ -76,12 +96,16 @@ app.post('/api/agent4/execute', async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: errorMessage,
+      details:
+        config.NODE_ENV !== 'production' && error instanceof Error
+          ? [{ field: 'execution', message: error.message }]
+          : undefined,
     });
   }
 });
 
 // Start the server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Agent4 server is running on port ${PORT}`);
   console.log(`Environment: ${config.NODE_ENV}`);
   console.log(`Available at: http://localhost:${PORT}`);
@@ -98,17 +122,28 @@ process.on('uncaughtException', (error) => {
   process.exit(1);
 });
 
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received, cleaning up...');
-  sharedLLM.destroy();
-  process.exit(0);
-});
+/**
+ * Graceful shutdown handler
+ * Properly closes server and cleans up resources
+ */
+function gracefulShutdown(signal: string) {
+  console.log(`${signal} received, starting graceful shutdown...`);
 
-process.on('SIGINT', () => {
-  console.log('SIGINT received, cleaning up...');
-  sharedLLM.destroy();
-  process.exit(0);
-});
+  server.close(() => {
+    console.log('HTTP server closed');
+    sharedLLM.destroy();
+    console.log('Resources cleaned up');
+    process.exit(0);
+  });
+
+  // Force shutdown after timeout
+  setTimeout(() => {
+    console.error('Could not close connections in time, forcefully shutting down');
+    process.exit(1);
+  }, 10000);
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 export default app;

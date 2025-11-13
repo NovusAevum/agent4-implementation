@@ -1,11 +1,56 @@
 import { FallbackLLM } from '../llm/fallback';
 
 export type WorkflowPhase = 'plan' | 'discover' | 'execute' | 'validate';
+
+/**
+ * Discovery result type
+ */
+export type DiscoveryResult = {
+  findings?: string;
+  resources?: string[];
+  missingInfo?: string[];
+  [key: string]: unknown;
+};
+
+/**
+ * Execution result type
+ */
+export type ExecutionResult = {
+  results?: string[];
+  errors?: string[];
+  status?: string;
+  [key: string]: unknown;
+};
+
+/**
+ * Validation result type
+ */
+export type ValidationResult = {
+  isValid?: boolean;
+  errors?: string[];
+  warnings?: string[];
+  report?: string;
+  [key: string]: unknown;
+};
+
+/**
+ * Checkpoint type for workflow state snapshots
+ */
+export type Checkpoint = {
+  id: string;
+  timestamp: number;
+  phase: WorkflowPhase;
+  state: Partial<WorkflowState>;
+};
+
+/**
+ * Complete workflow state
+ */
 export type WorkflowState = {
   plan?: string;
-  discovery?: any;
-  execution?: any;
-  validation?: any;
+  discovery?: DiscoveryResult | string;
+  execution?: ExecutionResult | string;
+  validation?: ValidationResult | string;
   metadata: {
     startTime: number;
     endTime?: number;
@@ -13,16 +58,11 @@ export type WorkflowState = {
     stepsCompleted: string[];
   };
   metaThinking?: {
-    decisionTree?: any;
+    decisionTree?: Record<string, unknown>;
     confidenceScores?: Record<string, number>;
     tradeoffs?: string[];
   };
-  checkpoints?: Array<{
-    id: string;
-    timestamp: number;
-    phase: string;
-    state: any;
-  }>;
+  checkpoints?: Checkpoint[];
 };
 
 export class Agent4Workflow {
@@ -59,7 +99,7 @@ export class Agent4Workflow {
     }
   }
 
-  async plan(task: string, context: any = {}): Promise<string> {
+  async plan(task: string, context: Record<string, unknown> = {}): Promise<string> {
     try {
       const prompt = `You are Agent 4, an advanced AI assistant. 
 
@@ -87,7 +127,7 @@ PLAN:`;
     }
   }
 
-  async discover(context: any = {}): Promise<any> {
+  async discover(context: Record<string, unknown> = {}): Promise<DiscoveryResult | string> {
     // Validate that plan phase completed
     if (!this.state.plan || this.state.plan.trim() === '') {
       throw new Error('Cannot run discover phase: plan phase not completed');
@@ -121,7 +161,7 @@ Provide a structured JSON response with your findings.`;
     }
   }
 
-  async execute(actions: any[] = []): Promise<any> {
+  async execute(actions: Record<string, unknown>[] = []): Promise<ExecutionResult | string> {
     // Validate that previous phases completed
     if (!this.state.plan || this.state.plan.trim() === '') {
       throw new Error('Cannot run execute phase: plan phase not completed');
@@ -160,7 +200,7 @@ Provide a structured JSON response with the execution results.`;
     }
   }
 
-  async validate(): Promise<any> {
+  async validate(): Promise<ValidationResult | string> {
     // Validate that previous phases completed
     if (!this.state.plan || this.state.plan.trim() === '') {
       throw new Error('Cannot run validate phase: plan phase not completed');
@@ -208,7 +248,7 @@ Provide a structured JSON response with the validation results.`;
     }
   }
 
-  async run(task: string, context: any = {}): Promise<WorkflowState> {
+  async run(task: string, context: Record<string, unknown> = {}): Promise<WorkflowState> {
     try {
       await this.plan(task, context);
       await this.discover(context);
@@ -226,9 +266,9 @@ Provide a structured JSON response with the validation results.`;
     return this.state;
   }
 
-  private safeJsonParse(jsonString: string): any {
+  private safeJsonParse(jsonString: string): Record<string, unknown> | string {
     try {
-      return JSON.parse(jsonString);
+      return JSON.parse(jsonString) as Record<string, unknown>;
     } catch (e) {
       // If parsing fails, return the original string
       return jsonString;
