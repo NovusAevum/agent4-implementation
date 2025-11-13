@@ -5,7 +5,11 @@ import { z } from 'zod';
 import { config } from './config/index';
 import { Agent4Workflow } from './agent4/workflow';
 import { FallbackLLM } from './llm/fallback';
-import { logger, ErrorHandler } from './utils';
+import { logger, ErrorHandler, metrics } from './utils';
+import { initTelemetry } from './telemetry';
+
+// Initialize OpenTelemetry (if enabled)
+initTelemetry();
 
 // Initialize Express app
 const app = express();
@@ -49,11 +53,29 @@ app.use('/api/', limiter);
 
 // Health check endpoint
 app.get('/health', (_req: Request, res: Response) => {
+  const healthStatus = metrics.getHealthStatus();
   res.status(200).json({
-    status: 'ok',
+    status: healthStatus.status,
     timestamp: new Date().toISOString(),
     environment: config.NODE_ENV,
+    uptime: metrics.getFormattedUptime(),
+    health: healthStatus,
   });
+});
+
+// Metrics endpoint
+app.get('/metrics', (_req: Request, res: Response) => {
+  try {
+    const systemMetrics = metrics.getSystemMetrics();
+    res.status(200).json({
+      success: true,
+      metrics: systemMetrics,
+    });
+  } catch (error) {
+    logger.error('Failed to retrieve metrics', ErrorHandler.format(error));
+    const errorResponse = ErrorHandler.toResponse(error, config.NODE_ENV !== 'production');
+    res.status(500).json(errorResponse);
+  }
 });
 
 // Main Agent4 API endpoint
