@@ -8,7 +8,7 @@ export class CodestralProvider extends BaseProvider {
   constructor(
     apiKey: string,
     model: string = 'codestral-latest',
-    apiUrl: string = 'https://codestral.mistral.ai/v1/fim/completions'
+    apiUrl: string = 'https://api.mistral.ai/v1/chat/completions'
   ) {
     super(apiKey);
     this.model = model;
@@ -20,14 +20,12 @@ export class CodestralProvider extends BaseProvider {
       max_tokens = 2048,
       temperature = 0.7,
       top_p = 1.0,
-      suffix = '',
       ...otherOptions
     } = options;
 
     const data = {
       model: this.model,
-      prompt,
-      suffix,
+      messages: [{ role: 'user', content: prompt }],
       max_tokens,
       temperature,
       top_p,
@@ -43,7 +41,7 @@ export class CodestralProvider extends BaseProvider {
       });
 
       const result = response.data as any;
-      return result.choices[0]?.message || result.choices[0]?.text || '';
+      return result.choices?.[0]?.message?.content || '';
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('Error calling Codestral API:', errorMessage);
