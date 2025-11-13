@@ -1,5 +1,4 @@
 import { LLMProvider } from './providers/base';
-import { MockProvider } from './providers/mock';
 import { HuggingFaceProvider } from './providers/huggingface';
 import { MistralProvider } from './providers/mistral';
 import { DeepSeekProvider } from './providers/deepseek';
@@ -40,7 +39,7 @@ const PROVIDER_CONFIG = {
   },
 } as const;
 
-type ProviderName = keyof typeof PROVIDER_CONFIG | 'mock';
+type ProviderName = keyof typeof PROVIDER_CONFIG;
 
 interface ProviderInfo {
   name: ProviderName;
@@ -137,7 +136,7 @@ export class FallbackLLM {
 
       // If no valid providers are specified, use a default fallback order
       const effectiveProviderOrder =
-        providerOrder.length > 0 ? providerOrder : ['huggingface', 'mock'];
+        providerOrder.length > 0 ? providerOrder : ['huggingface'];
 
       // Initialize providers with their respective configurations
       const providers = await Promise.all(
@@ -146,8 +145,8 @@ export class FallbackLLM {
             const providerConfig = PROVIDER_CONFIG[providerName as keyof typeof PROVIDER_CONFIG];
             const apiKey = config[providerConfig.envVar as keyof typeof config] as string;
 
-            if (!apiKey && providerName !== 'mock') {
-              console.warn(`No API key found for provider: ${providerName}`);
+            if (!apiKey || apiKey.startsWith('test-')) {
+              console.warn(`No valid API key found for provider: ${providerName}`);
               return null;
             }
 
@@ -189,10 +188,6 @@ export class FallbackLLM {
                   codestralConfig.model,
                   codestralConfig.apiUrl
                 );
-                break;
-
-              case 'mock':
-                provider = new MockProvider();
                 break;
 
               default:

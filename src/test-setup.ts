@@ -3,8 +3,9 @@ import { config } from './config/index';
 
 // Set test environment variables
 process.env.NODE_ENV = 'test';
-process.env.FALLBACK_ORDER = 'mock';
-process.env.DEFAULT_LLM_PROVIDER = 'mock';
+process.env.FALLBACK_ORDER = 'huggingface';
+process.env.DEFAULT_LLM_PROVIDER = 'huggingface';
+process.env.HF_TOKEN = 'test-token-for-jest';
 
 // Mock console methods to keep test output clean
 
@@ -23,18 +24,14 @@ afterAll(() => {
   delete process.env.NODE_ENV;
   delete process.env.FALLBACK_ORDER;
   delete process.env.DEFAULT_LLM_PROVIDER;
+  delete process.env.HF_TOKEN;
 });
 
 // Export a test configuration
 export const testConfig = {
   ...config,
   // Override configurations for testing
-  FALLBACK_ORDER: ['mock'],
-  DEFAULT_LLM_PROVIDER: 'mock',
-  // Disable other providers for testing
-  CONTINUE_API_KEY: '',
-  ALIBABA_QWEN_API_KEY: '',
-  KIMI_API_KEY: '',
-  CODECOPILOT_KEY: '',
-  HF_TOKEN: '',
+  FALLBACK_ORDER: ['huggingface'],
+  DEFAULT_LLM_PROVIDER: 'huggingface',
+  HF_TOKEN: 'test-token-for-jest',
 };
