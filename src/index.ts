@@ -32,7 +32,8 @@ const executeRequestSchema = z.object({
 app.use(
   cors({
     origin: config.CORS_ORIGIN === '*' ? '*' : config.CORS_ORIGIN.split(','),
-    credentials: true,
+    // Only enable credentials with specific origins (not wildcard)
+    credentials: config.CORS_ORIGIN !== '*',
   })
 );
 app.use(express.json({ limit: '1mb' })); // Limit request body size

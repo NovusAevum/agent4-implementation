@@ -105,7 +105,21 @@ export const config = {
     }
     return value;
   })(),
-  CORS_ORIGIN: rawConfig.CORS_ORIGIN,
+
+  // CORS Origin (with production security validation)
+  CORS_ORIGIN: (() => {
+    const origin = rawConfig.CORS_ORIGIN;
+
+    // CRITICAL: Never allow wildcard CORS in production with credentials
+    if (rawConfig.NODE_ENV === 'production' && origin === '*') {
+      throw new Error(
+        'SECURITY: CORS_ORIGIN cannot be "*" in production. ' +
+          'Specify allowed origins: "https://app.example.com,https://api.example.com"'
+      );
+    }
+
+    return origin;
+  })(),
 };
 
 export type Config = typeof config;
