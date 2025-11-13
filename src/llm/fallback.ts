@@ -5,7 +5,7 @@ import { DeepSeekProvider } from './providers/deepseek';
 import { OpenRouterProvider } from './providers/openrouter';
 import { CodestralProvider } from './providers/codestral';
 import { config } from '../config/index';
-import { logger, ErrorHandler } from '../utils';
+import { logger, ErrorHandler, llmCache } from '../utils';
 
 // Constants
 const HEALTH_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
@@ -255,6 +255,16 @@ export class FallbackLLM {
       throw new Error('No LLM providers available');
     }
 
+    // Check cache first (unless explicitly disabled)
+    const useCache = options.cache !== false;
+    if (useCache) {
+      const cached = llmCache.get(prompt, options);
+      if (cached) {
+        logger.debug('Returning cached response', { prompt: prompt.substring(0, 50) });
+        return cached;
+      }
+    }
+
     let lastError: Error | null = null;
 
     // Try each provider in order
@@ -269,6 +279,11 @@ export class FallbackLLM {
         providerInfo.lastError = null;
         providerInfo.totalRequests++;
         this.lastError = null; // Clear stale errors on success
+
+        // Cache the result (unless explicitly disabled)
+        if (useCache) {
+          llmCache.set(prompt, result, options);
+        }
 
         return result;
       } catch (error) {
