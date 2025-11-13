@@ -177,7 +177,7 @@ Provide a structured JSON response with your findings.`;
 TASK: ${sanitizePromptInput(this.state.plan || '')}
 
 DISCOVERY FINDINGS:
-${sanitizeContext(typeof this.state.discovery === 'object' ? this.state.discovery as Record<string, unknown> : { result: this.state.discovery })}
+${sanitizeContext(typeof this.state.discovery === 'object' ? (this.state.discovery as Record<string, unknown>) : { result: this.state.discovery })}
 
 ACTIONS TO EXECUTE:
 ${sanitizeContext({ actions })}
@@ -219,7 +219,7 @@ Provide a structured JSON response with the execution results.`;
 TASK: ${sanitizePromptInput(this.state.plan || '')}
 
 EXECUTION RESULTS:
-${sanitizeContext(typeof this.state.execution === 'object' ? this.state.execution as Record<string, unknown> : { result: this.state.execution })}
+${sanitizeContext(typeof this.state.execution === 'object' ? (this.state.execution as Record<string, unknown>) : { result: this.state.execution })}
 
 VALIDATION PHASE:
 1. Verify all requirements are met

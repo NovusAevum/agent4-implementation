@@ -272,14 +272,10 @@ describe('MetricsCollector', () => {
       const systemMetrics = metrics.getSystemMetrics();
 
       // Heap used should be less than heap total
-      expect(systemMetrics.memory.heapUsed).toBeLessThanOrEqual(
-        systemMetrics.memory.heapTotal
-      );
+      expect(systemMetrics.memory.heapUsed).toBeLessThanOrEqual(systemMetrics.memory.heapTotal);
 
       // RSS should be greater than heap total (includes native memory)
-      expect(systemMetrics.memory.rss).toBeGreaterThanOrEqual(
-        systemMetrics.memory.heapTotal
-      );
+      expect(systemMetrics.memory.rss).toBeGreaterThanOrEqual(systemMetrics.memory.heapTotal);
     });
 
     it('should report non-negative memory values', () => {
