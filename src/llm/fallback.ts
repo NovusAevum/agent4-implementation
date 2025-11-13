@@ -5,6 +5,7 @@ import { DeepSeekProvider } from './providers/deepseek';
 import { OpenRouterProvider } from './providers/openrouter';
 import { CodestralProvider } from './providers/codestral';
 import { config } from '../config/index';
+import { logger, ErrorHandler } from '../utils';
 
 // Constants
 const HEALTH_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
@@ -65,8 +66,9 @@ export class FallbackLLM {
 
   constructor() {
     this.initialize().catch((error) => {
-      console.error('Failed to initialize FallbackLLM:', error);
-      this.lastError = error instanceof Error ? error : new Error(String(error));
+      const formattedError = ErrorHandler.format(error);
+      logger.error('Failed to initialize FallbackLLM', formattedError);
+      this.lastError = formattedError;
     });
   }
 
@@ -80,7 +82,7 @@ export class FallbackLLM {
           this.startHealthChecks();
         })
         .catch((error) => {
-          console.error('Failed to initialize providers:', error);
+          logger.error('Failed to initialize providers', ErrorHandler.format(error));
           throw error;
         });
     }
@@ -114,10 +116,15 @@ export class FallbackLLM {
           providerInfo.isHealthy = isHealthy;
           if (isHealthy) {
             providerInfo.lastError = null;
+            logger.debug('Provider health check passed', { provider: providerInfo.name });
           }
         } catch (error) {
           providerInfo.isHealthy = false;
-          providerInfo.lastError = error instanceof Error ? error : new Error(String(error));
+          providerInfo.lastError = ErrorHandler.format(error);
+          logger.warn('Provider health check failed', {
+            provider: providerInfo.name,
+            error: ErrorHandler.getMessage(error),
+          });
         }
       })
     );
@@ -146,11 +153,11 @@ export class FallbackLLM {
 
             // In test/development, allow test keys; in production, require real keys
             if (!apiKey) {
-              console.warn(`No API key found for provider: ${providerName}`);
+              logger.warn('No API key found for provider', { provider: providerName });
               return null;
             }
             if (config.NODE_ENV === 'production' && apiKey.startsWith('test-')) {
-              console.warn(`Test API key not allowed in production for provider: ${providerName}`);
+              logger.warn('Test API key not allowed in production', { provider: providerName });
               return null;
             }
 
@@ -195,7 +202,7 @@ export class FallbackLLM {
                 break;
 
               default:
-                console.warn(`Provider ${providerName} not yet implemented`);
+                logger.warn('Provider not yet implemented', { provider: providerName });
                 return null;
             }
 
@@ -213,7 +220,9 @@ export class FallbackLLM {
               failedRequests: 0,
             };
           } catch (error) {
-            console.error(`Failed to initialize provider ${providerName}:`, error);
+            logger.error('Failed to initialize provider', ErrorHandler.format(error), {
+              provider: providerName,
+            });
             return null;
           }
         })
@@ -226,14 +235,16 @@ export class FallbackLLM {
         throw new Error('No valid LLM providers could be initialized');
       }
 
-      console.log(
-        `Initialized ${this.providers.length} LLM provider(s):`,
-        this.providers.map((p) => `${p.name} (${p.isHealthy ? 'healthy' : 'unhealthy'})`).join(', ')
-      );
+      logger.info('LLM providers initialized', {
+        count: this.providers.length,
+        providers: this.providers.map((p) => ({
+          name: p.name,
+          healthy: p.isHealthy,
+        })),
+      });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Error initializing providers:', errorMessage);
-      throw new Error(`Failed to initialize providers: ${errorMessage}`);
+      logger.error('Error initializing providers', ErrorHandler.format(error));
+      throw new Error(`Failed to initialize providers: ${ErrorHandler.getMessage(error)}`);
     }
   }
 
@@ -261,16 +272,19 @@ export class FallbackLLM {
 
         return result;
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        console.error(`Error with ${providerInfo.name} provider:`, errorMessage);
+        const formattedError = ErrorHandler.format(error);
+        logger.error('Provider generate failed', formattedError, {
+          provider: providerInfo.name,
+          errorCount: providerInfo.errorCount + 1,
+        });
 
         // Update failure statistics
         providerInfo.failedRequests++;
         providerInfo.errorCount++;
         providerInfo.isHealthy = false;
-        providerInfo.lastError = error instanceof Error ? error : new Error(String(error));
+        providerInfo.lastError = formattedError;
 
-        lastError = error instanceof Error ? error : new Error(String(error));
+        lastError = formattedError;
       }
     }
 

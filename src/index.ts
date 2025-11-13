@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { config } from './config/index';
 import { Agent4Workflow } from './agent4/workflow';
 import { FallbackLLM } from './llm/fallback';
+import { logger, ErrorHandler } from './utils';
 
 // Initialize Express app
 const app = express();
@@ -79,26 +80,32 @@ app.post('/api/agent4/execute', async (req: Request, res: Response) => {
     const agent = new Agent4Workflow(sharedLLM);
     const result = await agent.run(task, context);
 
+    logger.info('Agent4 execution successful', {
+      taskLength: task.length,
+      duration: result.metadata.endTime! - result.metadata.startTime,
+    });
+
     res.json({
       success: true,
       data: result,
     });
   } catch (error) {
-    console.error('Agent4 execution error:', error);
-    // Don't expose internal error details in production
-    const errorMessage =
+    logger.error('Agent4 execution error', ErrorHandler.format(error));
+
+    // Use ErrorHandler to create safe response
+    const errorResponse = ErrorHandler.toResponse(
+      error,
       config.NODE_ENV === 'production'
         ? 'An error occurred while processing your request'
-        : error instanceof Error
-          ? error.message
-          : 'Internal server error';
+        : undefined
+    );
 
-    res.status(500).json({
+    res.status(errorResponse.statusCode).json({
       success: false,
-      error: errorMessage,
+      error: errorResponse.message,
       details:
-        config.NODE_ENV !== 'production' && error instanceof Error
-          ? [{ field: 'execution', message: error.message }]
+        config.NODE_ENV !== 'production'
+          ? [{ field: 'execution', message: errorResponse.message }]
           : undefined,
     });
   }
@@ -106,19 +113,23 @@ app.post('/api/agent4/execute', async (req: Request, res: Response) => {
 
 // Start the server
 const server = app.listen(PORT, () => {
-  console.log(`Agent4 server is running on port ${PORT}`);
-  console.log(`Environment: ${config.NODE_ENV}`);
-  console.log(`Available at: http://localhost:${PORT}`);
+  logger.info('Agent4 server started', {
+    port: PORT,
+    environment: config.NODE_ENV,
+    url: `http://localhost:${PORT}`,
+  });
 });
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  logger.error('Unhandled Promise Rejection', ErrorHandler.format(reason), {
+    promise: String(promise),
+  });
 });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
+  logger.error('Uncaught Exception', ErrorHandler.format(error));
   process.exit(1);
 });
 
@@ -127,18 +138,18 @@ process.on('uncaughtException', (error) => {
  * Properly closes server and cleans up resources
  */
 function gracefulShutdown(signal: string) {
-  console.log(`${signal} received, starting graceful shutdown...`);
+  logger.info('Graceful shutdown initiated', { signal });
 
   server.close(() => {
-    console.log('HTTP server closed');
+    logger.info('HTTP server closed');
     sharedLLM.destroy();
-    console.log('Resources cleaned up');
+    logger.info('Resources cleaned up');
     process.exit(0);
   });
 
   // Force shutdown after timeout
   setTimeout(() => {
-    console.error('Could not close connections in time, forcefully shutting down');
+    logger.error('Graceful shutdown timeout - forcing exit');
     process.exit(1);
   }, 10000);
 }

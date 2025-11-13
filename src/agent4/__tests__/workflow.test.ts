@@ -82,7 +82,7 @@ describe('Agent4Workflow', () => {
       const task = 'Test task';
       mockLLM.generate.mockRejectedValue('String error');
 
-      await expect(workflow.plan(task)).rejects.toThrow('Plan phase failed: Unknown error');
+      await expect(workflow.plan(task)).rejects.toThrow('Plan phase failed: String error');
     });
   });
 

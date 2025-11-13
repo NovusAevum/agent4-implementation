@@ -2,7 +2,7 @@ import { HuggingFaceProvider } from '../huggingface';
 import axios from 'axios';
 
 jest.mock('axios');
-const mockedAxios = axios as jest.MockedFunction<typeof axios>;
+const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe('HuggingFaceProvider', () => {
   let provider: HuggingFaceProvider;
@@ -22,7 +22,7 @@ describe('HuggingFaceProvider', () => {
   describe('generate', () => {
     it('should make a request to the Hugging Face API with correct parameters', async () => {
       const mockResponse = { generated_text: 'Test response' };
-      mockedAxios.mockResolvedValueOnce({
+      mockedAxios.post.mockResolvedValueOnce({
         data: [mockResponse],
         status: 200,
         statusText: 'OK',
@@ -35,10 +35,15 @@ describe('HuggingFaceProvider', () => {
 
       const result = await provider.generate(prompt, options);
 
-      expect(mockedAxios).toHaveBeenCalledWith(
+      expect(mockedAxios.post).toHaveBeenCalledWith(
+        `${mockApiUrl}/${mockModel}`,
         expect.objectContaining({
-          method: 'POST',
-          url: `${mockApiUrl}/${mockModel}`,
+          inputs: prompt,
+          parameters: expect.objectContaining({
+            max_new_tokens: 50,
+          }),
+        }),
+        expect.objectContaining({
           headers: expect.objectContaining({
             Authorization: `Bearer ${mockApiKey}`,
             'Content-Type': 'application/json',
@@ -56,11 +61,11 @@ describe('HuggingFaceProvider', () => {
         },
         message: 'Request failed with status code 500',
       };
-      mockedAxios.mockRejectedValueOnce(errorResponse);
+      mockedAxios.post.mockRejectedValueOnce(errorResponse);
 
       const prompt = 'Test prompt';
 
-      await expect(provider.generate(prompt)).rejects.toThrow('HuggingFace API error');
+      await expect(provider.generate(prompt)).rejects.toThrow('HuggingFace API');
     });
 
     it('should handle retry logic for retryable errors', async () => {
@@ -73,7 +78,7 @@ describe('HuggingFaceProvider', () => {
       };
       const mockResponse = { generated_text: 'Test response after retry' };
 
-      mockedAxios.mockRejectedValueOnce(errorResponse).mockResolvedValueOnce({
+      mockedAxios.post.mockRejectedValueOnce(errorResponse).mockResolvedValueOnce({
         data: [mockResponse],
         status: 200,
         statusText: 'OK',
@@ -84,7 +89,7 @@ describe('HuggingFaceProvider', () => {
       const prompt = 'Test prompt';
       const result = await provider.generate(prompt);
 
-      expect(mockedAxios).toHaveBeenCalledTimes(2);
+      expect(mockedAxios.post).toHaveBeenCalledTimes(2);
       expect(result).toBe('Test response after retry');
     });
   });
@@ -92,7 +97,7 @@ describe('HuggingFaceProvider', () => {
   describe('checkHealth', () => {
     it('should return true if the API is healthy', async () => {
       (axios.post as jest.MockedFunction<typeof axios.post>) = jest.fn().mockResolvedValueOnce({
-        data: {},
+        data: [{ generated_text: 'Test' }],
         status: 200,
         statusText: 'OK',
         headers: {},
@@ -102,9 +107,15 @@ describe('HuggingFaceProvider', () => {
       const result = await provider.checkHealth();
 
       expect(result).toBe(true);
+      // checkHealth now calls generate() with "Test" prompt
       expect(axios.post).toHaveBeenCalledWith(
         `${mockApiUrl}/${mockModel}`,
-        {},
+        expect.objectContaining({
+          inputs: 'Test',
+          parameters: expect.objectContaining({
+            max_new_tokens: 10,
+          }),
+        }),
         expect.objectContaining({
           headers: expect.objectContaining({
             Authorization: `Bearer ${mockApiKey}`,
