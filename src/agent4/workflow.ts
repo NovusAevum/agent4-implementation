@@ -129,8 +129,8 @@ PLAN:`;
   }
 
   async discover(context: Record<string, unknown> = {}): Promise<DiscoveryResult | string> {
-    // Validate that plan phase completed
-    if (!this.state.plan || this.state.plan.trim() === '') {
+    // Validate that plan phase completed using authoritative stepsCompleted
+    if (!this.state.metadata.stepsCompleted.includes('plan')) {
       throw new Error('Cannot run discover phase: plan phase not completed');
     }
 
@@ -163,11 +163,11 @@ Provide a structured JSON response with your findings.`;
   }
 
   async execute(actions: Record<string, unknown>[] = []): Promise<ExecutionResult | string> {
-    // Validate that previous phases completed
-    if (!this.state.plan || this.state.plan.trim() === '') {
+    // Validate that previous phases completed using authoritative stepsCompleted
+    if (!this.state.metadata.stepsCompleted.includes('plan')) {
       throw new Error('Cannot run execute phase: plan phase not completed');
     }
-    if (!this.state.discovery) {
+    if (!this.state.metadata.stepsCompleted.includes('discover')) {
       throw new Error('Cannot run execute phase: discover phase not completed');
     }
 
@@ -202,14 +202,14 @@ Provide a structured JSON response with the execution results.`;
   }
 
   async validate(): Promise<ValidationResult | string> {
-    // Validate that previous phases completed
-    if (!this.state.plan || this.state.plan.trim() === '') {
+    // Validate that previous phases completed using authoritative stepsCompleted
+    if (!this.state.metadata.stepsCompleted.includes('plan')) {
       throw new Error('Cannot run validate phase: plan phase not completed');
     }
-    if (!this.state.discovery) {
+    if (!this.state.metadata.stepsCompleted.includes('discover')) {
       throw new Error('Cannot run validate phase: discover phase not completed');
     }
-    if (!this.state.execution) {
+    if (!this.state.metadata.stepsCompleted.includes('execute')) {
       throw new Error('Cannot run validate phase: execute phase not completed');
     }
 
