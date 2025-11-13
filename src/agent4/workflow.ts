@@ -1,5 +1,5 @@
 import { FallbackLLM } from '../llm/fallback';
-import { logger, ErrorHandler } from '../utils';
+import { logger, ErrorHandler, sanitizePromptInput, sanitizeContext } from '../utils';
 
 export type WorkflowPhase = 'plan' | 'discover' | 'execute' | 'validate';
 
@@ -102,12 +102,12 @@ export class Agent4Workflow {
 
   async plan(task: string, context: Record<string, unknown> = {}): Promise<string> {
     try {
-      const prompt = `You are Agent 4, an advanced AI assistant. 
+      const prompt = `You are Agent 4, an advanced AI assistant.
 
-TASK: ${task}
+TASK: ${sanitizePromptInput(task)}
 
 CONTEXT:
-${JSON.stringify(context, null, 2)}
+${sanitizeContext(context)}
 
 PLAN PHASE:
 1. Analyze the task requirements
@@ -137,10 +137,10 @@ PLAN:`;
     try {
       const prompt = `You are Agent 4 in DISCOVERY phase.
 
-TASK: ${this.state.plan}
+TASK: ${sanitizePromptInput(this.state.plan || '')}
 
 EXISTING CONTEXT:
-${JSON.stringify(context, null, 2)}
+${sanitizeContext(context)}
 
 DISCOVERY PHASE:
 1. Analyze available information
@@ -174,13 +174,13 @@ Provide a structured JSON response with your findings.`;
     try {
       const prompt = `You are Agent 4 in EXECUTION phase.
 
-TASK: ${this.state.plan}
+TASK: ${sanitizePromptInput(this.state.plan || '')}
 
 DISCOVERY FINDINGS:
-${JSON.stringify(this.state.discovery, null, 2)}
+${sanitizeContext(typeof this.state.discovery === 'object' ? this.state.discovery as Record<string, unknown> : { result: this.state.discovery })}
 
 ACTIONS TO EXECUTE:
-${JSON.stringify(actions, null, 2)}
+${sanitizeContext({ actions })}
 
 EXECUTION PHASE:
 1. Execute the planned actions
@@ -216,10 +216,10 @@ Provide a structured JSON response with the execution results.`;
     try {
       const prompt = `You are Agent 4 in VALIDATION phase.
 
-TASK: ${this.state.plan}
+TASK: ${sanitizePromptInput(this.state.plan || '')}
 
 EXECUTION RESULTS:
-${JSON.stringify(this.state.execution, null, 2)}
+${sanitizeContext(typeof this.state.execution === 'object' ? this.state.execution as Record<string, unknown> : { result: this.state.execution })}
 
 VALIDATION PHASE:
 1. Verify all requirements are met

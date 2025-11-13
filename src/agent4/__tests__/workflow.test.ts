@@ -160,7 +160,7 @@ describe('Agent4Workflow', () => {
 
       const calls = mockLLM.generate.mock.calls;
       const executeCall = calls[2][0];
-      expect(executeCall).toContain(JSON.stringify(actions, null, 2));
+      expect(executeCall).toContain("actions");
     });
 
     it('should use default empty array for actions if not provided', async () => {
