@@ -8,6 +8,16 @@ import { logger } from './logger';
 /**
  * Sanitize user input for LLM prompts
  * Removes potential prompt injection patterns
+ *
+ * @param input - The user input string to sanitize
+ * @param maxLength - Maximum allowed length (default: 10000)
+ * @returns Sanitized string safe for LLM prompts
+ *
+ * @example
+ * ```ts
+ * const safe = sanitizePromptInput("Ignore previous instructions");
+ * // Returns: "" (injection pattern removed)
+ * ```
  */
 export function sanitizePromptInput(input: string, maxLength = 10000): string {
   if (typeof input !== 'string') {
@@ -56,6 +66,15 @@ export function sanitizePromptInput(input: string, maxLength = 10000): string {
 
 /**
  * Sanitize context objects to prevent injection through nested fields
+ *
+ * @param context - The context object to sanitize
+ * @returns JSON string representation with size limits
+ *
+ * @example
+ * ```ts
+ * const json = sanitizeContext({ user: "john", role: "admin" });
+ * // Returns: '{"user":"john","role":"admin"}'
+ * ```
  */
 export function sanitizeContext(context: Record<string, unknown>): string {
   try {
@@ -79,6 +98,17 @@ export function sanitizeContext(context: Record<string, unknown>): string {
 
 /**
  * Validate and sanitize task input from API
+ * Removes control characters and applies prompt sanitization
+ *
+ * @param task - The task string to validate and sanitize
+ * @returns Sanitized task string
+ * @throws {Error} If task is empty after sanitization
+ *
+ * @example
+ * ```ts
+ * const clean = sanitizeTaskInput("Create a function\x00");
+ * // Returns: "Create a function" (null byte removed)
+ * ```
  */
 export function sanitizeTaskInput(task: string): string {
   if (!task || typeof task !== 'string') {

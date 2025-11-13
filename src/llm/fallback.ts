@@ -32,7 +32,7 @@ const PROVIDER_CONFIG = {
     apiUrl: 'https://openrouter.ai/api/v1/chat/completions',
     envVar: 'OPENROUTER_API_KEY',
     headers: {
-      'HTTP-Referer': 'https://github.com/your-username/agent4-implementation',
+      'HTTP-Referer': 'https://github.com/NovusAevum/agent4-implementation',
       'X-Title': 'Agent4 Implementation',
     },
   },

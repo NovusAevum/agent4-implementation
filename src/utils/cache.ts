@@ -46,7 +46,15 @@ export class LLMCache<T = string> {
   }
 
   /**
-   * Generate cache key from prompt and options
+   * Generate cache key from prompt and options using SHA-256 hash
+   *
+   * @param prompt - The prompt text
+   * @param options - Optional generation options (affects cache key)
+   * @returns SHA-256 hash as cache key
+   *
+   * @remarks
+   * Identical prompts with different options generate different keys.
+   * Prompts are normalized (trimmed and lowercased) before hashing.
    */
   private generateKey(prompt: string, options?: Record<string, unknown>): string {
     const normalized = {
@@ -190,6 +198,14 @@ export class LLMCache<T = string> {
 
   /**
    * Get cache statistics
+   *
+   * @returns Cache statistics including hits, misses, size, and hit rate
+   *
+   * @example
+   * ```ts
+   * const stats = cache.getStats();
+   * console.log(`Hit rate: ${(stats.hitRate * 100).toFixed(2)}%`);
+   * ```
    */
   getStats(): CacheStats {
     const total = this.hits + this.misses;

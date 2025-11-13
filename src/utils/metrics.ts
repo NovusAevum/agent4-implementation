@@ -57,6 +57,19 @@ export class MetricsCollector {
 
   /**
    * Get system-wide metrics
+   *
+   * @returns Comprehensive system metrics including:
+   *  - uptime: Process uptime in milliseconds
+   *  - cache: LLM cache statistics
+   *  - memory: Memory usage (heap, RSS) in MB
+   *  - process: Node.js process information
+   *
+   * @example
+   * ```ts
+   * const metrics = collector.getSystemMetrics();
+   * console.log(`Uptime: ${metrics.uptime}ms`);
+   * console.log(`Cache hit rate: ${metrics.cache.hitRate}`);
+   * ```
    */
   getSystemMetrics(): SystemMetrics {
     const memUsage = process.memoryUsage();
@@ -118,7 +131,19 @@ export class MetricsCollector {
   }
 
   /**
-   * Get comprehensive health check
+   * Get comprehensive health check with status determination
+   *
+   * @returns Health status object with:
+   *  - status: 'healthy' | 'degraded' | 'unhealthy'
+   *  - uptime: Process uptime in milliseconds
+   *  - memory: Heap usage percentage
+   *  - cache: Cache hit rate percentage
+   *
+   * @remarks
+   * Status levels:
+   * - healthy: Normal operation (heap < 80%, cache hit rate > 20%)
+   * - degraded: Performance issues (heap > 80% or low cache hit rate)
+   * - unhealthy: Critical state (heap > 95%)
    */
   getHealthStatus(): {
     status: 'healthy' | 'degraded' | 'unhealthy';
