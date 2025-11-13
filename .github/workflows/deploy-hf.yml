@@ -33,8 +33,8 @@ jobs:
       env:
         HF_TOKEN: ${{ secrets.HF_TOKEN }}
       run: |
-        git config --global user.email "wmh.dirc@gmail.com"
-        git config --global user.name "LetsTryGPT"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git config --global user.name "github-actions[bot]"
         
         # Clone or create the space
         python << 'EOF'
