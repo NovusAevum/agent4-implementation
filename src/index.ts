@@ -34,9 +34,21 @@ app.use(
     origin: config.CORS_ORIGIN === '*' ? '*' : config.CORS_ORIGIN.split(','),
     // Only enable credentials with specific origins (not wildcard)
     credentials: config.CORS_ORIGIN !== '*',
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    exposedHeaders: ['X-Request-ID', 'X-Response-Time'],
+    maxAge: 86400, // 24 hours preflight cache
+    optionsSuccessStatus: 204, // Some legacy browsers choke on 204
   })
 );
 app.use(express.json({ limit: '1mb' })); // Limit request body size
+
+// Request ID middleware for error tracking
+app.use((req, _res, next) => {
+  req.headers['x-request-id'] =
+    req.headers['x-request-id'] || `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  next();
+});
 
 // Rate limiting middleware
 const limiter = rateLimit({
@@ -81,11 +93,18 @@ app.get('/metrics', (_req: Request, res: Response) => {
 
 // Main Agent4 API endpoint
 app.post('/api/agent4/execute', async (req: Request, res: Response) => {
+  const requestId = req.headers['x-request-id'] as string;
+  const startTime = Date.now();
+
   try {
     // Validate request body
     const validationResult = executeRequestSchema.safeParse(req.body);
 
     if (!validationResult.success) {
+      logger.warn('Invalid request', {
+        requestId,
+        errors: validationResult.error.errors,
+      });
       res.status(400).json({
         success: false,
         error: 'Invalid request',
@@ -93,32 +112,56 @@ app.post('/api/agent4/execute', async (req: Request, res: Response) => {
           field: e.path.join('.'),
           message: e.message,
         })),
+        requestId,
       });
       return;
     }
 
     const { task, context } = validationResult.data;
 
+    logger.info('Agent4 execution started', {
+      requestId,
+      taskLength: task.length,
+      hasContext: Object.keys(context).length > 0,
+    });
+
     // Reuse shared LLM instance to prevent memory leaks
     const agent = new Agent4Workflow(sharedLLM);
     const result = await agent.run(task, context);
 
+    const duration = Date.now() - startTime;
     logger.info('Agent4 execution successful', {
+      requestId,
       taskLength: task.length,
-      duration: result.metadata.endTime! - result.metadata.startTime,
+      duration,
+      plan: result.plan?.substring(0, 100) || 'N/A',
     });
 
+    res.setHeader('X-Request-ID', requestId);
+    res.setHeader('X-Response-Time', `${duration}ms`);
     res.json({
       success: true,
       data: result,
+      requestId,
+      duration,
     });
   } catch (error) {
-    logger.error('Agent4 execution error', ErrorHandler.format(error));
+    const duration = Date.now() - startTime;
+    logger.error('Agent4 execution error', ErrorHandler.format(error), {
+      requestId,
+      duration,
+      errorType: error instanceof Error ? error.constructor.name : 'Unknown',
+    });
 
     // Use ErrorHandler to create safe response
     const errorResponse = ErrorHandler.toResponse(error, config.NODE_ENV !== 'production');
 
-    res.status(500).json(errorResponse);
+    res.setHeader('X-Request-ID', requestId);
+    res.status(500).json({
+      ...errorResponse,
+      requestId,
+      duration,
+    });
   }
 });
 

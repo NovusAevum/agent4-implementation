@@ -9,6 +9,10 @@ import { logger, ErrorHandler, llmCache } from '../utils';
 
 // Constants
 const HEALTH_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+const PROVIDER_TIMEOUT_MS = 30000; // 30 seconds timeout per provider
+const MAX_RETRY_ATTEMPTS = 2; // Retry failed requests 2 times
+const CIRCUIT_BREAKER_THRESHOLD = 5; // Open circuit after 5 consecutive failures
+const CIRCUIT_BREAKER_RESET_MS = 60000; // Reset circuit breaker after 1 minute
 
 // Provider configurations with all available models
 const PROVIDER_CONFIG = {
@@ -55,6 +59,9 @@ interface ProviderInfo {
   lastUsed: number;
   totalRequests: number;
   failedRequests: number;
+  circuitBreakerOpen: boolean;
+  circuitBreakerOpenedAt: number | null;
+  consecutiveFailures: number;
 }
 
 export class FallbackLLM {
@@ -220,6 +227,9 @@ export class FallbackLLM {
               lastUsed: 0,
               totalRequests: 0,
               failedRequests: 0,
+              circuitBreakerOpen: false,
+              circuitBreakerOpenedAt: null,
+              consecutiveFailures: 0,
             };
           } catch (error) {
             logger.error('Failed to initialize provider', ErrorHandler.format(error), {
@@ -250,11 +260,105 @@ export class FallbackLLM {
     }
   }
 
+  /**
+   * Generate response with timeout protection
+   * @private
+   */
+  private async generateWithTimeout(
+    provider: LLMProvider,
+    prompt: string,
+    options: Record<string, unknown>,
+    timeoutMs: number
+  ): Promise<string> {
+    return Promise.race([
+      provider.generate(prompt, options),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`Provider timeout after ${timeoutMs}ms`)), timeoutMs)
+      ),
+    ]);
+  }
+
+  /**
+   * Check and reset circuit breaker if cooldown period elapsed
+   * @private
+   */
+  private checkCircuitBreaker(providerInfo: ProviderInfo): boolean {
+    if (!providerInfo.circuitBreakerOpen) return false;
+
+    const now = Date.now();
+    const timeSinceOpen = now - (providerInfo.circuitBreakerOpenedAt || 0);
+
+    // Reset circuit breaker after cooldown period
+    if (timeSinceOpen >= CIRCUIT_BREAKER_RESET_MS) {
+      logger.info('Circuit breaker reset', { provider: providerInfo.name });
+      providerInfo.circuitBreakerOpen = false;
+      providerInfo.circuitBreakerOpenedAt = null;
+      providerInfo.consecutiveFailures = 0;
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Try provider with retry logic and exponential backoff
+   * @private
+   */
+  private async tryProviderWithRetry(
+    providerInfo: ProviderInfo,
+    prompt: string,
+    options: Record<string, unknown>
+  ): Promise<string> {
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
+      try {
+        // Add exponential backoff delay for retries
+        if (attempt > 0) {
+          const backoffMs = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+          logger.debug('Retrying with backoff', {
+            provider: providerInfo.name,
+            attempt,
+            backoffMs,
+          });
+          await new Promise((resolve) => setTimeout(resolve, backoffMs));
+        }
+
+        const result = await this.generateWithTimeout(
+          providerInfo.provider,
+          prompt,
+          options,
+          PROVIDER_TIMEOUT_MS
+        );
+
+        return result;
+      } catch (error) {
+        lastError = ErrorHandler.format(error);
+        logger.warn('Provider attempt failed', {
+          provider: providerInfo.name,
+          attempt: attempt + 1,
+          maxAttempts: MAX_RETRY_ATTEMPTS + 1,
+          error: ErrorHandler.getMessage(error),
+        });
+
+        // Don't retry if it's not a retryable error
+        if (attempt < MAX_RETRY_ATTEMPTS && !ErrorHandler.isRetryable(error)) {
+          logger.debug('Error not retryable, skipping further attempts', {
+            provider: providerInfo.name,
+          });
+          break;
+        }
+      }
+    }
+
+    throw lastError || new Error('All retry attempts failed');
+  }
+
   async generate(prompt: string, options: Record<string, unknown> = {}): Promise<string> {
     await this.initialize();
 
     if (this.providers.length === 0) {
-      throw new Error('No LLM providers available');
+      throw new Error('No LLM providers available. Check API keys and network connectivity.');
     }
 
     // Check cache first (unless explicitly disabled)
@@ -268,19 +372,37 @@ export class FallbackLLM {
     }
 
     let lastError: Error | null = null;
+    const startTime = Date.now();
 
     // Try each provider in order
     for (const providerInfo of this.providers) {
+      // Check circuit breaker
+      if (this.checkCircuitBreaker(providerInfo)) {
+        logger.debug('Circuit breaker open, skipping provider', {
+          provider: providerInfo.name,
+          openedAt: providerInfo.circuitBreakerOpenedAt,
+        });
+        continue;
+      }
+
       try {
         providerInfo.lastUsed = Date.now();
+        providerInfo.totalRequests++;
 
-        const result = await providerInfo.provider.generate(prompt, options);
+        const result = await this.tryProviderWithRetry(providerInfo, prompt, options);
 
         // Success - mark provider as healthy and update statistics
         providerInfo.isHealthy = true;
         providerInfo.lastError = null;
-        providerInfo.totalRequests++;
+        providerInfo.consecutiveFailures = 0;
         this.lastError = null; // Clear stale errors on success
+
+        const duration = Date.now() - startTime;
+        logger.info('Provider generate succeeded', {
+          provider: providerInfo.name,
+          duration,
+          cached: false,
+        });
 
         // Cache the result (unless explicitly disabled)
         if (useCache) {
@@ -290,23 +412,38 @@ export class FallbackLLM {
         return result;
       } catch (error) {
         const formattedError = ErrorHandler.format(error);
-        logger.error('Provider generate failed', formattedError, {
+        logger.error('Provider generate failed after retries', formattedError, {
           provider: providerInfo.name,
           errorCount: providerInfo.errorCount + 1,
+          consecutiveFailures: providerInfo.consecutiveFailures + 1,
         });
 
         // Update failure statistics
         providerInfo.failedRequests++;
         providerInfo.errorCount++;
+        providerInfo.consecutiveFailures++;
         providerInfo.isHealthy = false;
         providerInfo.lastError = formattedError;
+
+        // Open circuit breaker if threshold reached
+        if (providerInfo.consecutiveFailures >= CIRCUIT_BREAKER_THRESHOLD) {
+          providerInfo.circuitBreakerOpen = true;
+          providerInfo.circuitBreakerOpenedAt = Date.now();
+          logger.warn('Circuit breaker opened', {
+            provider: providerInfo.name,
+            consecutiveFailures: providerInfo.consecutiveFailures,
+          });
+        }
 
         lastError = formattedError;
       }
     }
 
     this.lastError = lastError;
-    throw lastError || new Error('All providers failed to generate a response');
+    const errorMessage =
+      lastError?.message ||
+      'All LLM providers failed to generate a response. Check logs for details.';
+    throw new Error(`FallbackLLM Error: ${errorMessage}`);
   }
 
   getActiveProviderName(): string {
