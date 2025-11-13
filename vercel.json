@@ -3,28 +3,28 @@
   "name": "agent4-multi-llm",
   "builds": [
     {
-      "src": "dist/index.js",
+      "src": "src/index.ts",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/health",
-      "dest": "/dist/index.js"
+      "dest": "/src/index.ts"
     },
     {
       "src": "/api/agent4/execute",
-      "dest": "/dist/index.js",
+      "dest": "/src/index.ts",
       "methods": ["POST"]
     },
     {
       "src": "/(.*)",
-      "dest": "/dist/index.js"
+      "dest": "/src/index.ts"
     }
   ],
   "env": {
     "NODE_ENV": "production",
-    "PORT": "3000",
+    "PORT": "7860",
     "HF_TOKEN": "@hf_token",
     "MISTRAL_API_KEY": "@mistral_api_key",
     "DEEPSEEK_API_KEY": "@deepseek_api_key",
@@ -40,7 +40,7 @@
     }
   },
   "functions": {
-    "dist/index.js": {
+    "src/index.ts": {
       "memory": 3008,
       "maxDuration": 60
     }
