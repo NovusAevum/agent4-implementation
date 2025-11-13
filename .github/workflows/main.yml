@@ -69,23 +69,8 @@ jobs:
         with:
           sarif_file: 'trivy-results.sarif'
 
-      - name: Check for secrets with TruffleHog
-        run: |
-          docker run --rm -v "$PWD:/workdir" -w /workdir \
-            ghcr.io/trufflesecurity/trufflehog:latest \
-            filesystem /workdir \
-            --only-verified \
-            --no-update \
-            --json > trufflehog-results.json || true
-
-          # Check if any verified secrets were found
-          if [ -s trufflehog-results.json ]; then
-            echo "⚠️ TruffleHog found potential secrets:"
-            cat trufflehog-results.json
-            exit 1
-          else
-            echo "✅ No verified secrets detected"
-          fi
+      # Note: Secret scanning is handled by Gitleaks in validate-pr.yml
+      # TruffleHog removed due to persistent GitHub Action compatibility issues
 
   # Job 3: Build application
   build:
