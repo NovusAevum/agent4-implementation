@@ -1,11 +1,57 @@
 import { FallbackLLM } from '../llm/fallback';
+import { logger, ErrorHandler, sanitizePromptInput, sanitizeContext } from '../utils';
 
 export type WorkflowPhase = 'plan' | 'discover' | 'execute' | 'validate';
+
+/**
+ * Discovery result type
+ */
+export type DiscoveryResult = {
+  findings?: string;
+  resources?: string[];
+  missingInfo?: string[];
+  [key: string]: unknown;
+};
+
+/**
+ * Execution result type
+ */
+export type ExecutionResult = {
+  results?: string[];
+  errors?: string[];
+  status?: string;
+  [key: string]: unknown;
+};
+
+/**
+ * Validation result type
+ */
+export type ValidationResult = {
+  isValid?: boolean;
+  errors?: string[];
+  warnings?: string[];
+  report?: string;
+  [key: string]: unknown;
+};
+
+/**
+ * Checkpoint type for workflow state snapshots
+ */
+export type Checkpoint = {
+  id: string;
+  timestamp: number;
+  phase: WorkflowPhase;
+  state: Partial<WorkflowState>;
+};
+
+/**
+ * Complete workflow state
+ */
 export type WorkflowState = {
   plan?: string;
-  discovery?: any;
-  execution?: any;
-  validation?: any;
+  discovery?: DiscoveryResult | string;
+  execution?: ExecutionResult | string;
+  validation?: ValidationResult | string;
   metadata: {
     startTime: number;
     endTime?: number;
@@ -13,24 +59,20 @@ export type WorkflowState = {
     stepsCompleted: string[];
   };
   metaThinking?: {
-    decisionTree?: any;
+    decisionTree?: Record<string, unknown>;
     confidenceScores?: Record<string, number>;
     tradeoffs?: string[];
   };
-  checkpoints?: Array<{
-    id: string;
-    timestamp: number;
-    phase: string;
-    state: any;
-  }>;
+  checkpoints?: Checkpoint[];
 };
 
 export class Agent4Workflow {
   private llm: FallbackLLM;
   private state: WorkflowState;
 
-  constructor() {
-    this.llm = new FallbackLLM();
+  constructor(llm?: FallbackLLM) {
+    // Use injected LLM or create new one (for testing/backward compatibility)
+    this.llm = llm || new FallbackLLM();
     this.state = {
       metadata: {
         startTime: Date.now(),
@@ -58,14 +100,14 @@ export class Agent4Workflow {
     }
   }
 
-  async plan(task: string, context: any = {}): Promise<string> {
+  async plan(task: string, context: Record<string, unknown> = {}): Promise<string> {
     try {
-      const prompt = `You are Agent 4, an advanced AI assistant. 
+      const prompt = `You are Agent 4, an advanced AI assistant.
 
-TASK: ${task}
+TASK: ${sanitizePromptInput(task)}
 
 CONTEXT:
-${JSON.stringify(context, null, 2)}
+${sanitizeContext(context)}
 
 PLAN PHASE:
 1. Analyze the task requirements
@@ -78,22 +120,27 @@ PLAN:`;
       const plan = await this.llm.generate(prompt, { max_tokens: 2000 });
       await this.updateState({ plan });
       this.addCompletedStep('plan');
+      logger.info('Plan phase completed', { planLength: plan.length });
       return plan;
     } catch (error) {
-      console.error('Error in plan phase:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      throw new Error(`Plan phase failed: ${errorMessage}`);
+      logger.error('Error in plan phase', ErrorHandler.format(error));
+      throw new Error(`Plan phase failed: ${ErrorHandler.getMessage(error)}`);
     }
   }
 
-  async discover(context: any = {}): Promise<any> {
+  async discover(context: Record<string, unknown> = {}): Promise<DiscoveryResult | string> {
+    // Validate that plan phase completed using authoritative stepsCompleted
+    if (!this.state.metadata.stepsCompleted.includes('plan')) {
+      throw new Error('Cannot run discover phase: plan phase not completed');
+    }
+
     try {
       const prompt = `You are Agent 4 in DISCOVERY phase.
 
-TASK: ${this.state.plan}
+TASK: ${sanitizePromptInput(this.state.plan || '')}
 
 EXISTING CONTEXT:
-${JSON.stringify(context, null, 2)}
+${sanitizeContext(context)}
 
 DISCOVERY PHASE:
 1. Analyze available information
@@ -107,25 +154,33 @@ Provide a structured JSON response with your findings.`;
       const parsedDiscovery = this.safeJsonParse(discovery);
       await this.updateState({ discovery: parsedDiscovery });
       this.addCompletedStep('discover');
+      logger.info('Discover phase completed', { discoveryType: typeof parsedDiscovery });
       return parsedDiscovery;
     } catch (error) {
-      console.error('Error in discover phase:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      throw new Error(`Discover phase failed: ${errorMessage}`);
+      logger.error('Error in discover phase', ErrorHandler.format(error));
+      throw new Error(`Discover phase failed: ${ErrorHandler.getMessage(error)}`);
     }
   }
 
-  async execute(actions: any[] = []): Promise<any> {
+  async execute(actions: Record<string, unknown>[] = []): Promise<ExecutionResult | string> {
+    // Validate that previous phases completed using authoritative stepsCompleted
+    if (!this.state.metadata.stepsCompleted.includes('plan')) {
+      throw new Error('Cannot run execute phase: plan phase not completed');
+    }
+    if (!this.state.metadata.stepsCompleted.includes('discover')) {
+      throw new Error('Cannot run execute phase: discover phase not completed');
+    }
+
     try {
       const prompt = `You are Agent 4 in EXECUTION phase.
 
-TASK: ${this.state.plan}
+TASK: ${sanitizePromptInput(this.state.plan || '')}
 
 DISCOVERY FINDINGS:
-${JSON.stringify(this.state.discovery, null, 2)}
+${sanitizeContext(typeof this.state.discovery === 'object' ? (this.state.discovery as Record<string, unknown>) : { result: this.state.discovery })}
 
 ACTIONS TO EXECUTE:
-${JSON.stringify(actions, null, 2)}
+${sanitizeContext({ actions })}
 
 EXECUTION PHASE:
 1. Execute the planned actions
@@ -138,22 +193,33 @@ Provide a structured JSON response with the execution results.`;
       const parsedExecution = this.safeJsonParse(execution);
       await this.updateState({ execution: parsedExecution });
       this.addCompletedStep('execute');
+      logger.info('Execute phase completed', { executionType: typeof parsedExecution });
       return parsedExecution;
     } catch (error) {
-      console.error('Error in execute phase:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      throw new Error(`Execute phase failed: ${errorMessage}`);
+      logger.error('Error in execute phase', ErrorHandler.format(error));
+      throw new Error(`Execute phase failed: ${ErrorHandler.getMessage(error)}`);
     }
   }
 
-  async validate(): Promise<any> {
+  async validate(): Promise<ValidationResult | string> {
+    // Validate that previous phases completed using authoritative stepsCompleted
+    if (!this.state.metadata.stepsCompleted.includes('plan')) {
+      throw new Error('Cannot run validate phase: plan phase not completed');
+    }
+    if (!this.state.metadata.stepsCompleted.includes('discover')) {
+      throw new Error('Cannot run validate phase: discover phase not completed');
+    }
+    if (!this.state.metadata.stepsCompleted.includes('execute')) {
+      throw new Error('Cannot run validate phase: execute phase not completed');
+    }
+
     try {
       const prompt = `You are Agent 4 in VALIDATION phase.
 
-TASK: ${this.state.plan}
+TASK: ${sanitizePromptInput(this.state.plan || '')}
 
 EXECUTION RESULTS:
-${JSON.stringify(this.state.execution, null, 2)}
+${sanitizeContext(typeof this.state.execution === 'object' ? (this.state.execution as Record<string, unknown>) : { result: this.state.execution })}
 
 VALIDATION PHASE:
 1. Verify all requirements are met
@@ -175,24 +241,32 @@ Provide a structured JSON response with the validation results.`;
       });
 
       this.addCompletedStep('validate');
+      logger.info('Validate phase completed', {
+        duration: this.state.metadata.endTime! - this.state.metadata.startTime,
+      });
       return parsedValidation;
     } catch (error) {
-      console.error('Error in validate phase:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      throw new Error(`Validate phase failed: ${errorMessage}`);
+      logger.error('Error in validate phase', ErrorHandler.format(error));
+      throw new Error(`Validate phase failed: ${ErrorHandler.getMessage(error)}`);
     }
   }
 
-  async run(task: string, context: any = {}): Promise<WorkflowState> {
+  async run(task: string, context: Record<string, unknown> = {}): Promise<WorkflowState> {
     try {
+      logger.info('Workflow started', { task: task.substring(0, 100) });
       await this.plan(task, context);
       await this.discover(context);
       await this.execute([{ task }]);
       await this.validate();
 
-      return this.getState();
+      const finalState = this.getState();
+      logger.info('Workflow completed successfully', {
+        duration: finalState.metadata.endTime! - finalState.metadata.startTime,
+        stepsCompleted: finalState.metadata.stepsCompleted.length,
+      });
+      return finalState;
     } catch (error) {
-      console.error('Workflow execution failed:', error);
+      logger.error('Workflow execution failed', ErrorHandler.format(error));
       throw error;
     }
   }
@@ -201,9 +275,9 @@ Provide a structured JSON response with the validation results.`;
     return this.state;
   }
 
-  private safeJsonParse(jsonString: string): any {
+  private safeJsonParse(jsonString: string): Record<string, unknown> | string {
     try {
-      return JSON.parse(jsonString);
+      return JSON.parse(jsonString) as Record<string, unknown>;
     } catch (e) {
       // If parsing fails, return the original string
       return jsonString;

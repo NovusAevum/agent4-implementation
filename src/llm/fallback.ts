@@ -1,11 +1,18 @@
 import { LLMProvider } from './providers/base';
-import { MockProvider } from './providers/mock';
 import { HuggingFaceProvider } from './providers/huggingface';
 import { MistralProvider } from './providers/mistral';
 import { DeepSeekProvider } from './providers/deepseek';
 import { OpenRouterProvider } from './providers/openrouter';
 import { CodestralProvider } from './providers/codestral';
 import { config } from '../config/index';
+import { logger, ErrorHandler, llmCache } from '../utils';
+
+// Constants
+const HEALTH_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+const PROVIDER_TIMEOUT_MS = 30000; // 30 seconds timeout per provider
+const MAX_RETRY_ATTEMPTS = 2; // Retry failed requests 2 times
+const CIRCUIT_BREAKER_THRESHOLD = 5; // Open circuit after 5 consecutive failures
+const CIRCUIT_BREAKER_RESET_MS = 60000; // Reset circuit breaker after 1 minute
 
 // Provider configurations with all available models
 const PROVIDER_CONFIG = {
@@ -13,16 +20,6 @@ const PROVIDER_CONFIG = {
     model: 'mistralai/Mistral-7B-Instruct-v0.1',
     apiUrl: 'https://api-inference.huggingface.co/models',
     envVar: 'HF_TOKEN',
-  },
-  alibaba_qwen: {
-    model: 'Qwen/Qwen1.5-72B-Chat',
-    apiUrl: 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
-    envVar: 'ALIBABA_QWEN_API_KEY',
-  },
-  kimi: {
-    model: 'kimi-2-8b',
-    apiUrl: 'https://api.moonshot.cn/v1/chat/completions',
-    envVar: 'KIMI_API_KEY',
   },
   mistral: {
     model: 'mistral-small-latest',
@@ -39,7 +36,7 @@ const PROVIDER_CONFIG = {
     apiUrl: 'https://openrouter.ai/api/v1/chat/completions',
     envVar: 'OPENROUTER_API_KEY',
     headers: {
-      'HTTP-Referer': 'https://github.com/your-username/agent4-implementation',
+      'HTTP-Referer': 'https://github.com/NovusAevum/agent4-implementation',
       'X-Title': 'Agent4 Implementation',
     },
   },
@@ -50,7 +47,7 @@ const PROVIDER_CONFIG = {
   },
 } as const;
 
-type ProviderName = keyof typeof PROVIDER_CONFIG | 'mock';
+type ProviderName = keyof typeof PROVIDER_CONFIG;
 
 interface ProviderInfo {
   name: ProviderName;
@@ -62,6 +59,9 @@ interface ProviderInfo {
   lastUsed: number;
   totalRequests: number;
   failedRequests: number;
+  circuitBreakerOpen: boolean;
+  circuitBreakerOpenedAt: number | null;
+  consecutiveFailures: number;
 }
 
 export class FallbackLLM {
@@ -69,12 +69,15 @@ export class FallbackLLM {
   private initialized = false;
   private initializationPromise: Promise<void> | null = null;
   private lastError: Error | null = null;
-  // @ts-ignore - Used for health checking interval management
-  private healthCheckInterval: NodeJS.Timeout | null = null;
+  private healthCheckInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
     this.initialize().catch((error) => {
-      console.error('Failed to initialize FallbackLLM:', error);
+      const formattedError = ErrorHandler.format(error);
+      logger.error('Failed to initialize FallbackLLM', formattedError);
+      this.lastError = formattedError;
+      // Ensure no health check interval is running if initialization failed
+      this.destroy();
     });
   }
 
@@ -88,7 +91,7 @@ export class FallbackLLM {
           this.startHealthChecks();
         })
         .catch((error) => {
-          console.error('Failed to initialize providers:', error);
+          logger.error('Failed to initialize providers', ErrorHandler.format(error));
           throw error;
         });
     }
@@ -98,12 +101,22 @@ export class FallbackLLM {
 
   private startHealthChecks(): void {
     // Run health check every 5 minutes
-    this.healthCheckInterval = setInterval(
-      async () => {
-        await this.checkAllProvidersHealth();
-      },
-      5 * 60 * 1000
-    );
+    // Use unref() to allow process to exit gracefully even if interval is active
+    this.healthCheckInterval = setInterval(async () => {
+      await this.checkAllProvidersHealth();
+    }, HEALTH_CHECK_INTERVAL_MS);
+    this.healthCheckInterval.unref();
+  }
+
+  /**
+   * Stop health checks and clean up resources
+   * Call this before destroying the FallbackLLM instance to prevent memory leaks
+   */
+  destroy(): void {
+    if (this.healthCheckInterval) {
+      clearInterval(this.healthCheckInterval);
+      this.healthCheckInterval = null;
+    }
   }
 
   private async checkAllProvidersHealth(): Promise<void> {
@@ -114,22 +127,19 @@ export class FallbackLLM {
           providerInfo.isHealthy = isHealthy;
           if (isHealthy) {
             providerInfo.lastError = null;
+            logger.debug('Provider health check passed', { provider: providerInfo.name });
           }
         } catch (error) {
           providerInfo.isHealthy = false;
-          providerInfo.lastError = error instanceof Error ? error : new Error(String(error));
+          providerInfo.lastError = ErrorHandler.format(error);
+          logger.warn('Provider health check failed', {
+            provider: providerInfo.name,
+            error: ErrorHandler.getMessage(error),
+          });
         }
       })
     );
   }
-
-  // Remove unused method
-  // private stopHealthChecks(): void {
-  //   if (this.healthCheckInterval) {
-  //     clearInterval(this.healthCheckInterval);
-  //     this.healthCheckInterval = null;
-  //   }
-  // }
 
   private async initializeProviders(): Promise<void> {
     try {
@@ -143,8 +153,7 @@ export class FallbackLLM {
       ).filter((name): name is ProviderName => name in PROVIDER_CONFIG);
 
       // If no valid providers are specified, use a default fallback order
-      const effectiveProviderOrder =
-        providerOrder.length > 0 ? providerOrder : ['huggingface', 'mock'];
+      const effectiveProviderOrder = providerOrder.length > 0 ? providerOrder : ['huggingface'];
 
       // Initialize providers with their respective configurations
       const providers = await Promise.all(
@@ -153,8 +162,13 @@ export class FallbackLLM {
             const providerConfig = PROVIDER_CONFIG[providerName as keyof typeof PROVIDER_CONFIG];
             const apiKey = config[providerConfig.envVar as keyof typeof config] as string;
 
-            if (!apiKey && providerName !== 'mock') {
-              console.warn(`No API key found for provider: ${providerName}`);
+            // In test/development, allow test keys; in production, require real keys
+            if (!apiKey) {
+              logger.warn('No API key found for provider', { provider: providerName });
+              return null;
+            }
+            if (config.NODE_ENV === 'production' && apiKey.startsWith('test-')) {
+              logger.warn('Test API key not allowed in production', { provider: providerName });
               return null;
             }
 
@@ -198,12 +212,8 @@ export class FallbackLLM {
                 );
                 break;
 
-              case 'mock':
-                provider = new MockProvider();
-                break;
-
               default:
-                console.warn(`Provider ${providerName} not yet implemented`);
+                logger.warn('Provider not yet implemented', { provider: providerName });
                 return null;
             }
 
@@ -219,9 +229,14 @@ export class FallbackLLM {
               lastUsed: 0,
               totalRequests: 0,
               failedRequests: 0,
+              circuitBreakerOpen: false,
+              circuitBreakerOpenedAt: null,
+              consecutiveFailures: 0,
             };
           } catch (error) {
-            console.error(`Failed to initialize provider ${providerName}:`, error);
+            logger.error('Failed to initialize provider', ErrorHandler.format(error), {
+              provider: providerName,
+            });
             return null;
           }
         })
@@ -234,43 +249,209 @@ export class FallbackLLM {
         throw new Error('No valid LLM providers could be initialized');
       }
 
-      console.log(
-        `Initialized ${this.providers.length} LLM provider(s):`,
-        this.providers.map((p) => `${p.name} (${p.isHealthy ? 'healthy' : 'unhealthy'})`).join(', ')
-      );
+      logger.info('LLM providers initialized', {
+        count: this.providers.length,
+        providers: this.providers.map((p) => ({
+          name: p.name,
+          healthy: p.isHealthy,
+        })),
+      });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Error initializing providers:', errorMessage);
-      throw new Error(`Failed to initialize providers: ${errorMessage}`);
+      logger.error('Error initializing providers', ErrorHandler.format(error));
+      throw new Error(`Failed to initialize providers: ${ErrorHandler.getMessage(error)}`);
     }
+  }
+
+  /**
+   * Generate response with timeout protection
+   * @private
+   */
+  private async generateWithTimeout(
+    provider: LLMProvider,
+    prompt: string,
+    options: Record<string, unknown>,
+    timeoutMs: number
+  ): Promise<string> {
+    return Promise.race([
+      provider.generate(prompt, options),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`Provider timeout after ${timeoutMs}ms`)), timeoutMs)
+      ),
+    ]);
+  }
+
+  /**
+   * Check and reset circuit breaker if cooldown period elapsed
+   * @private
+   */
+  private checkCircuitBreaker(providerInfo: ProviderInfo): boolean {
+    if (!providerInfo.circuitBreakerOpen) return false;
+
+    const now = Date.now();
+    const timeSinceOpen = now - (providerInfo.circuitBreakerOpenedAt || 0);
+
+    // Reset circuit breaker after cooldown period
+    if (timeSinceOpen >= CIRCUIT_BREAKER_RESET_MS) {
+      logger.info('Circuit breaker reset', { provider: providerInfo.name });
+      providerInfo.circuitBreakerOpen = false;
+      providerInfo.circuitBreakerOpenedAt = null;
+      providerInfo.consecutiveFailures = 0;
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Try provider with retry logic and exponential backoff
+   * @private
+   */
+  private async tryProviderWithRetry(
+    providerInfo: ProviderInfo,
+    prompt: string,
+    options: Record<string, unknown>
+  ): Promise<string> {
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
+      try {
+        // Add exponential backoff delay for retries
+        if (attempt > 0) {
+          const backoffMs = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+          logger.debug('Retrying with backoff', {
+            provider: providerInfo.name,
+            attempt,
+            backoffMs,
+          });
+          await new Promise((resolve) => setTimeout(resolve, backoffMs));
+        }
+
+        const result = await this.generateWithTimeout(
+          providerInfo.provider,
+          prompt,
+          options,
+          PROVIDER_TIMEOUT_MS
+        );
+
+        return result;
+      } catch (error) {
+        lastError = ErrorHandler.format(error);
+        logger.warn('Provider attempt failed', {
+          provider: providerInfo.name,
+          attempt: attempt + 1,
+          maxAttempts: MAX_RETRY_ATTEMPTS + 1,
+          error: ErrorHandler.getMessage(error),
+        });
+
+        // Don't retry if it's not a retryable error
+        if (attempt < MAX_RETRY_ATTEMPTS && !ErrorHandler.isRetryable(error)) {
+          logger.debug('Error not retryable, skipping further attempts', {
+            provider: providerInfo.name,
+          });
+          break;
+        }
+      }
+    }
+
+    throw lastError || new Error('All retry attempts failed');
   }
 
   async generate(prompt: string, options: Record<string, unknown> = {}): Promise<string> {
     await this.initialize();
 
     if (this.providers.length === 0) {
-      throw new Error('No LLM providers available');
+      throw new Error('No LLM providers available. Check API keys and network connectivity.');
     }
 
-    let lastError: Error | null = null;
-
-    // Try each provider in order
-    for (const { name, provider } of this.providers) {
-      try {
-        const result = await provider.generate(prompt, options);
-        return result;
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        console.error(`Error with ${name} provider:`, errorMessage);
-        lastError = error instanceof Error ? error : new Error(String(error));
+    // Check cache first (unless explicitly disabled)
+    const useCache = options.cache !== false;
+    if (useCache) {
+      const cached = llmCache.get(prompt, options);
+      if (cached) {
+        logger.debug('Returning cached response', { prompt: prompt.substring(0, 50) });
+        return cached;
       }
     }
 
-    throw lastError || new Error('All providers failed to generate a response');
+    let lastError: Error | null = null;
+    const startTime = Date.now();
+
+    // Try each provider in order
+    for (const providerInfo of this.providers) {
+      // Check circuit breaker
+      if (this.checkCircuitBreaker(providerInfo)) {
+        logger.debug('Circuit breaker open, skipping provider', {
+          provider: providerInfo.name,
+          openedAt: providerInfo.circuitBreakerOpenedAt,
+        });
+        continue;
+      }
+
+      try {
+        providerInfo.lastUsed = Date.now();
+        providerInfo.totalRequests++;
+
+        const result = await this.tryProviderWithRetry(providerInfo, prompt, options);
+
+        // Success - mark provider as healthy and update statistics
+        providerInfo.isHealthy = true;
+        providerInfo.lastError = null;
+        providerInfo.consecutiveFailures = 0;
+        this.lastError = null; // Clear stale errors on success
+
+        const duration = Date.now() - startTime;
+        logger.info('Provider generate succeeded', {
+          provider: providerInfo.name,
+          duration,
+          cached: false,
+        });
+
+        // Cache the result (unless explicitly disabled)
+        if (useCache) {
+          llmCache.set(prompt, result, options);
+        }
+
+        return result;
+      } catch (error) {
+        const formattedError = ErrorHandler.format(error);
+        logger.error('Provider generate failed after retries', formattedError, {
+          provider: providerInfo.name,
+          errorCount: providerInfo.errorCount + 1,
+          consecutiveFailures: providerInfo.consecutiveFailures + 1,
+        });
+
+        // Update failure statistics
+        providerInfo.failedRequests++;
+        providerInfo.errorCount++;
+        providerInfo.consecutiveFailures++;
+        providerInfo.isHealthy = false;
+        providerInfo.lastError = formattedError;
+
+        // Open circuit breaker if threshold reached
+        if (providerInfo.consecutiveFailures >= CIRCUIT_BREAKER_THRESHOLD) {
+          providerInfo.circuitBreakerOpen = true;
+          providerInfo.circuitBreakerOpenedAt = Date.now();
+          logger.warn('Circuit breaker opened', {
+            provider: providerInfo.name,
+            consecutiveFailures: providerInfo.consecutiveFailures,
+          });
+        }
+
+        lastError = formattedError;
+      }
+    }
+
+    this.lastError = lastError;
+    const errorMessage =
+      lastError?.message ||
+      'All LLM providers failed to generate a response. Check logs for details.';
+    throw new Error(`FallbackLLM Error: ${errorMessage}`);
   }
 
   getActiveProviderName(): string {
-    return this.providers[0]?.name || 'none';
+    // Return the first healthy provider, or the first provider if none are healthy
+    const healthyProvider = this.providers.find((p) => p.isHealthy);
+    return healthyProvider?.name || this.providers[0]?.name || 'none';
   }
 
   getActiveProvider(): LLMProvider | null {

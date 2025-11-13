@@ -4,7 +4,6 @@ services:
   app:
     build:
       context: .
-      target: production
     container_name: agent4-app
     restart: unless-stopped
     ports:

@@ -1,62 +1,63 @@
 import { BaseProvider } from './base';
 import axios from 'axios';
+import {
+  ErrorHandler,
+  logger,
+  LLMResponse,
+  LLMOptions,
+  ResponseParser,
+  RequestBuilder,
+} from '../../utils';
 
 export class CodestralProvider extends BaseProvider {
   private readonly apiUrl: string;
   private readonly model: string;
+  private readonly timeout: number = 30000;
 
   constructor(
     apiKey: string,
     model: string = 'codestral-latest',
-    apiUrl: string = 'https://codestral.mistral.ai/v1/fim/completions'
+    apiUrl: string = 'https://api.mistral.ai/v1/chat/completions'
   ) {
     super(apiKey);
     this.model = model;
     this.apiUrl = apiUrl;
   }
 
-  async generate(prompt: string, options: any = {}): Promise<string> {
-    const {
-      max_tokens = 2048,
-      temperature = 0.7,
-      top_p = 1.0,
-      suffix = '',
-      ...otherOptions
-    } = options;
-
-    const data = {
-      model: this.model,
-      prompt,
-      suffix,
-      max_tokens,
-      temperature,
-      top_p,
-      ...otherOptions,
-    };
-
+  async generate(prompt: string, options: LLMOptions = {}): Promise<string> {
     try {
-      const response = await axios.post(this.apiUrl, data, {
+      const data = RequestBuilder.buildChatRequest(this.model, prompt, {
+        max_tokens: 2048, // Codestral default for code generation
+        ...options,
+      });
+
+      logger.debug('Codestral API request', { model: this.model, prompt: prompt.substring(0, 50) });
+
+      const response = await axios.post<LLMResponse>(this.apiUrl, data, {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${this.apiKey}`,
         },
+        timeout: this.timeout,
       });
 
-      const result = response.data as any;
-      return result.choices[0]?.message || result.choices[0]?.text || '';
+      const content = ResponseParser.extractContent(response.data);
+      logger.debug('Codestral API response received', { length: content.length });
+
+      return content;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Error calling Codestral API:', errorMessage);
-      throw new Error(`Failed to generate text: ${errorMessage}`);
+      logger.error('Codestral API call failed', error as Error);
+      ErrorHandler.logAndThrow(error, 'Codestral API');
     }
   }
 
   async checkHealth(): Promise<boolean> {
     try {
       await this.generate('Test', { max_tokens: 10 });
+      logger.info('Codestral health check passed');
       return true;
     } catch (error) {
-      console.error('Codestral health check failed:', error);
+      logger.warn('Codestral health check failed', { error: ErrorHandler.getMessage(error) });
       return false;
     }
   }
