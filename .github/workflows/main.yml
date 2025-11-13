@@ -170,6 +170,7 @@ jobs:
       - name: Install Hugging Face CLI
         run: |
           pip install --upgrade huggingface_hub
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Deploy to Hugging Face Space
         env:
@@ -178,13 +179,13 @@ jobs:
           # Configure git
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
-          
+
           # Login to Hugging Face
           huggingface-cli login --token $HF_TOKEN
-          
+
           # Create or update the space
           huggingface-cli repo create ${{ github.repository }} --type space --space_sdk docker || true
-          
+
           # Clone the space repository
           git clone https://huggingface.co/spaces/${{ github.repository }} hf-space || git clone https://huggingface.co/spaces/${{ github.repository_owner }}/agent4-implementation hf-space
           
