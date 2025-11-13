@@ -101,9 +101,11 @@ export class FallbackLLM {
 
   private startHealthChecks(): void {
     // Run health check every 5 minutes
+    // Use unref() to allow process to exit gracefully even if interval is active
     this.healthCheckInterval = setInterval(async () => {
       await this.checkAllProvidersHealth();
     }, HEALTH_CHECK_INTERVAL_MS);
+    this.healthCheckInterval.unref();
   }
 
   /**

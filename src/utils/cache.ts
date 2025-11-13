@@ -34,9 +34,11 @@ export class LLMCache<T = string> {
     const cleanupIntervalMs = options.cleanupIntervalMs || 60 * 1000; // Cleanup every minute
 
     // Start automatic cleanup of expired entries
+    // Use unref() to allow process to exit gracefully even if interval is active
     this.cleanupInterval = setInterval(() => {
       this.cleanup();
     }, cleanupIntervalMs);
+    this.cleanupInterval.unref();
 
     logger.info('LLM Cache initialized', {
       defaultTTL: this.defaultTTL,
