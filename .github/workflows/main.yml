@@ -52,6 +52,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
@@ -71,9 +73,7 @@ jobs:
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
-          base: ${{ github.event.before || github.event.pull_request.base.sha || '' }}
-          head: ${{ github.event.after || github.event.pull_request.head.sha || 'HEAD' }}
-          extra_args: --only-verified
+          extra_args: --only-verified --no-update
 
   # Job 3: Build application
   build:
