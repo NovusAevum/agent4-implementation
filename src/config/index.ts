@@ -40,8 +40,7 @@ export const config = {
 
   // LLM Providers
   DEFAULT_LLM_PROVIDER: rawConfig.DEFAULT_LLM_PROVIDER,
-  FALLBACK_ORDER: rawConfig.FALLBACK_ORDER
-    .split(',')
+  FALLBACK_ORDER: rawConfig.FALLBACK_ORDER.split(',')
     .map((s) => s.trim())
     .filter((s) => s.length > 0),
 

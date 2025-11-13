@@ -90,12 +90,9 @@ export class FallbackLLM {
 
   private startHealthChecks(): void {
     // Run health check every 5 minutes
-    this.healthCheckInterval = setInterval(
-      async () => {
-        await this.checkAllProvidersHealth();
-      },
-      HEALTH_CHECK_INTERVAL_MS
-    );
+    this.healthCheckInterval = setInterval(async () => {
+      await this.checkAllProvidersHealth();
+    }, HEALTH_CHECK_INTERVAL_MS);
   }
 
   /**
@@ -138,8 +135,7 @@ export class FallbackLLM {
       ).filter((name): name is ProviderName => name in PROVIDER_CONFIG);
 
       // If no valid providers are specified, use a default fallback order
-      const effectiveProviderOrder =
-        providerOrder.length > 0 ? providerOrder : ['huggingface'];
+      const effectiveProviderOrder = providerOrder.length > 0 ? providerOrder : ['huggingface'];
 
       // Initialize providers with their respective configurations
       const providers = await Promise.all(

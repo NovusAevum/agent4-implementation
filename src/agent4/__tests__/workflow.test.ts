@@ -1,4 +1,4 @@
-import { Agent4Workflow, WorkflowState } from '../workflow';
+import { Agent4Workflow } from '../workflow';
 import { FallbackLLM } from '../../llm/fallback';
 
 // Mock the FallbackLLM module
@@ -30,7 +30,7 @@ describe('Agent4Workflow', () => {
       expect(state).toBeDefined();
       expect(state.metadata).toBeDefined();
       expect(state.metadata.startTime).toBeDefined();
-      expect(state.metadata.provider).toBe('mock-provider');
+      expect(state.metadata.provider).toBe('none'); // Initially 'none' before any updates
       expect(state.metadata.stepsCompleted).toEqual([]);
     });
 
@@ -48,10 +48,9 @@ describe('Agent4Workflow', () => {
       const result = await workflow.plan(task);
 
       expect(result).toBe(planResult);
-      expect(mockLLM.generate).toHaveBeenCalledWith(
-        expect.stringContaining(task),
-        { max_tokens: 2000 }
-      );
+      expect(mockLLM.generate).toHaveBeenCalledWith(expect.stringContaining(task), {
+        max_tokens: 2000,
+      });
 
       const state = workflow.getState();
       expect(state.plan).toBe(planResult);
@@ -171,10 +170,9 @@ describe('Agent4Workflow', () => {
       await workflow.discover();
       await workflow.execute();
 
-      expect(mockLLM.generate).toHaveBeenCalledWith(
-        expect.stringContaining('[]'),
-        { max_tokens: 3000 }
-      );
+      expect(mockLLM.generate).toHaveBeenCalledWith(expect.stringContaining('[]'), {
+        max_tokens: 3000,
+      });
     });
 
     it('should handle errors in execute phase', async () => {
@@ -345,8 +343,11 @@ describe('Agent4Workflow', () => {
       expect(result).toBe(invalidJson);
     });
 
-    it('should handle empty strings', async () => {
-      mockLLM.generate.mockResolvedValue('');
+    it('should handle empty strings in JSON parsing', async () => {
+      // Plan must return non-empty string to pass validation
+      mockLLM.generate.mockResolvedValueOnce('Test plan');
+      // Discover can return empty string to test JSON parsing
+      mockLLM.generate.mockResolvedValueOnce('');
 
       await workflow.plan('Test task');
       const result = await workflow.discover();
