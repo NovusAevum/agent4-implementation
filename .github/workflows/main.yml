@@ -70,10 +70,22 @@ jobs:
           sarif_file: 'trivy-results.sarif'
 
       - name: Check for secrets with TruffleHog
-        uses: trufflesecurity/trufflehog@main
-        with:
-          path: ./
-          extra_args: --only-verified --no-update
+        run: |
+          docker run --rm -v "$PWD:/workdir" -w /workdir \
+            ghcr.io/trufflesecurity/trufflehog:latest \
+            filesystem /workdir \
+            --only-verified \
+            --no-update \
+            --json > trufflehog-results.json || true
+
+          # Check if any verified secrets were found
+          if [ -s trufflehog-results.json ]; then
+            echo "⚠️ TruffleHog found potential secrets:"
+            cat trufflehog-results.json
+            exit 1
+          else
+            echo "✅ No verified secrets detected"
+          fi
 
   # Job 3: Build application
   build:
