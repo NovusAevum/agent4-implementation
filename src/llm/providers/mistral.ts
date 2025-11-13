@@ -1,9 +1,18 @@
 import { BaseProvider } from './base';
 import axios from 'axios';
+import {
+  ErrorHandler,
+  logger,
+  LLMResponse,
+  LLMOptions,
+  ResponseParser,
+  RequestBuilder,
+} from '../../utils';
 
 export class MistralProvider extends BaseProvider {
   private readonly apiUrl: string;
   private readonly model: string;
+  private readonly timeout: number = 30000;
 
   constructor(
     apiKey: string,
@@ -15,28 +24,27 @@ export class MistralProvider extends BaseProvider {
     this.apiUrl = apiUrl;
   }
 
-  async generate(prompt: string, options: any = {}): Promise<string> {
-    const { max_tokens = 1024, temperature = 0.7, top_p = 1.0 } = options;
-
-    const data = {
-      model: this.model,
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens,
-      temperature,
-      top_p,
-    };
-
+  async generate(prompt: string, options: LLMOptions = {}): Promise<string> {
     try {
-      const response = await axios.post(this.apiUrl, data, {
+      const data = RequestBuilder.buildChatRequest(this.model, prompt, options);
+
+      logger.debug('Mistral API request', { model: this.model, prompt: prompt.substring(0, 50) });
+
+      const response = await axios.post<LLMResponse>(this.apiUrl, data, {
         headers: {
           Authorization: `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
         },
+        timeout: this.timeout,
       });
 
-      return response.data.choices[0].message.content;
+      const content = ResponseParser.extractContent(response.data);
+      logger.debug('Mistral API response received', { length: content.length });
+
+      return content;
     } catch (error) {
-      throw new Error(`Mistral API error: ${error}`);
+      logger.error('Mistral API call failed', error as Error);
+      ErrorHandler.logAndThrow(error, 'Mistral API');
     }
   }
 }

@@ -1,7 +1,4 @@
-// Mock all providers for testing
-export * from './mock';
-
-// Mock other providers to prevent network requests
+// Mock all providers for testing to prevent network requests
 export class ContinueProvider {
   constructor() {}
   async checkHealth() {

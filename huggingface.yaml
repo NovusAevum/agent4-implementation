@@ -1,6 +1,7 @@
 # huggingface.yaml
-# Space configuration
-space: ${{ github.repository_owner }}/${{ github.event.repository.name }}
+# Space configuration for Hugging Face Spaces
+# Note: This file contains configuration hints for HF Spaces
+# The actual space is created via GitHub Actions deployment
 sdk: docker
 app_port: 3000
 
@@ -11,17 +12,15 @@ env_vars:
   - PORT=3000
   
   # LLM Provider API Keys
-  - HUGGINGFACE_API_KEY
-  - ALIBABA_QWEN_API_KEY
-  - KIMI_API_KEY
+  - HF_TOKEN
   - MISTRAL_API_KEY
   - DEEPSEEK_API_KEY
   - OPENROUTER_API_KEY
   - CODESTRAL_API_KEY
-  
+
   # Application Configuration
   - DEFAULT_LLM_PROVIDER=huggingface
-  - FALLBACK_ORDER=huggingface,alibaba_qwen,kimi,mistral,deepseek,openrouter,codestral
+  - FALLBACK_ORDER=huggingface,mistral,deepseek,openrouter,codestral
   - LOG_LEVEL=info
   - CORS_ORIGIN=*
   - RATE_LIMIT_WINDOW_MS=900000
@@ -47,11 +46,8 @@ health_checks:
 # Build settings
 build:
   dockerfile: Dockerfile
-  target: production
   build_args:
     - NODE_ENV=production
-  cache_from: type=gha
-  cache_to: type=gha,mode=max
 
 # Deployment settings
 deploy:
