@@ -93,21 +93,9 @@ app.post('/api/agent4/execute', async (req: Request, res: Response) => {
     logger.error('Agent4 execution error', ErrorHandler.format(error));
 
     // Use ErrorHandler to create safe response
-    const errorResponse = ErrorHandler.toResponse(
-      error,
-      config.NODE_ENV === 'production'
-        ? 'An error occurred while processing your request'
-        : undefined
-    );
+    const errorResponse = ErrorHandler.toResponse(error, config.NODE_ENV !== 'production');
 
-    res.status(errorResponse.statusCode).json({
-      success: false,
-      error: errorResponse.message,
-      details:
-        config.NODE_ENV !== 'production'
-          ? [{ field: 'execution', message: errorResponse.message }]
-          : undefined,
-    });
+    res.status(500).json(errorResponse);
   }
 });
 
