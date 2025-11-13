@@ -1,4 +1,5 @@
 import { FallbackLLM } from '../llm/fallback';
+import { logger, ErrorHandler } from '../utils';
 
 export type WorkflowPhase = 'plan' | 'discover' | 'execute' | 'validate';
 
@@ -119,11 +120,11 @@ PLAN:`;
       const plan = await this.llm.generate(prompt, { max_tokens: 2000 });
       await this.updateState({ plan });
       this.addCompletedStep('plan');
+      logger.info('Plan phase completed', { planLength: plan.length });
       return plan;
     } catch (error) {
-      console.error('Error in plan phase:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      throw new Error(`Plan phase failed: ${errorMessage}`);
+      logger.error('Error in plan phase', ErrorHandler.format(error));
+      throw new Error(`Plan phase failed: ${ErrorHandler.getMessage(error)}`);
     }
   }
 
@@ -153,11 +154,11 @@ Provide a structured JSON response with your findings.`;
       const parsedDiscovery = this.safeJsonParse(discovery);
       await this.updateState({ discovery: parsedDiscovery });
       this.addCompletedStep('discover');
+      logger.info('Discover phase completed', { discoveryType: typeof parsedDiscovery });
       return parsedDiscovery;
     } catch (error) {
-      console.error('Error in discover phase:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      throw new Error(`Discover phase failed: ${errorMessage}`);
+      logger.error('Error in discover phase', ErrorHandler.format(error));
+      throw new Error(`Discover phase failed: ${ErrorHandler.getMessage(error)}`);
     }
   }
 
@@ -192,11 +193,11 @@ Provide a structured JSON response with the execution results.`;
       const parsedExecution = this.safeJsonParse(execution);
       await this.updateState({ execution: parsedExecution });
       this.addCompletedStep('execute');
+      logger.info('Execute phase completed', { executionType: typeof parsedExecution });
       return parsedExecution;
     } catch (error) {
-      console.error('Error in execute phase:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      throw new Error(`Execute phase failed: ${errorMessage}`);
+      logger.error('Error in execute phase', ErrorHandler.format(error));
+      throw new Error(`Execute phase failed: ${ErrorHandler.getMessage(error)}`);
     }
   }
 
@@ -240,24 +241,32 @@ Provide a structured JSON response with the validation results.`;
       });
 
       this.addCompletedStep('validate');
+      logger.info('Validate phase completed', {
+        duration: this.state.metadata.endTime! - this.state.metadata.startTime,
+      });
       return parsedValidation;
     } catch (error) {
-      console.error('Error in validate phase:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      throw new Error(`Validate phase failed: ${errorMessage}`);
+      logger.error('Error in validate phase', ErrorHandler.format(error));
+      throw new Error(`Validate phase failed: ${ErrorHandler.getMessage(error)}`);
     }
   }
 
   async run(task: string, context: Record<string, unknown> = {}): Promise<WorkflowState> {
     try {
+      logger.info('Workflow started', { task: task.substring(0, 100) });
       await this.plan(task, context);
       await this.discover(context);
       await this.execute([{ task }]);
       await this.validate();
 
-      return this.getState();
+      const finalState = this.getState();
+      logger.info('Workflow completed successfully', {
+        duration: finalState.metadata.endTime! - finalState.metadata.startTime,
+        stepsCompleted: finalState.metadata.stepsCompleted.length,
+      });
+      return finalState;
     } catch (error) {
-      console.error('Workflow execution failed:', error);
+      logger.error('Workflow execution failed', ErrorHandler.format(error));
       throw error;
     }
   }
