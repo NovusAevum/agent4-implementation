@@ -123,14 +123,6 @@ export class FallbackLLM {
     );
   }
 
-  // Remove unused method
-  // private stopHealthChecks(): void {
-  //   if (this.healthCheckInterval) {
-  //     clearInterval(this.healthCheckInterval);
-  //     this.healthCheckInterval = null;
-  //   }
-  // }
-
   private async initializeProviders(): Promise<void> {
     try {
       // Get the list of providers in order of preference
