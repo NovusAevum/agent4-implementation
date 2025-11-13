@@ -6,14 +6,10 @@ dotenv.config();
 const envSchema = z.object({
   // API Keys (all optional with test defaults)
   HF_TOKEN: z.string().optional(),
-  ALIBABA_QWEN_API_KEY: z.string().optional(),
-  KIMI_API_KEY: z.string().optional(),
   MISTRAL_API_KEY: z.string().optional(),
   DEEPSEEK_API_KEY: z.string().optional(),
   OPENROUTER_API_KEY: z.string().optional(),
   CODESTRAL_API_KEY: z.string().optional(),
-  CONTINUE_API_KEY: z.string().optional(),
-  CODECOPILOT_KEY: z.string().optional(),
 
   // Configuration
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -47,10 +43,6 @@ export const config = {
   FALLBACK_ORDER: rawConfig.FALLBACK_ORDER.split(',').map((s) => s.trim()),
 
   // API Keys (with test defaults for development)
-  CONTINUE_API_KEY: rawConfig.CONTINUE_API_KEY || 'test-continue-key',
-  ALIBABA_QWEN_API_KEY: rawConfig.ALIBABA_QWEN_API_KEY || 'test-alibaba-key',
-  KIMI_API_KEY: rawConfig.KIMI_API_KEY || 'test-kimi-key',
-  CODECOPILOT_KEY: rawConfig.CODECOPILOT_KEY || 'test-codestral-key',
   HF_TOKEN: rawConfig.HF_TOKEN || 'test-hf-token',
   MISTRAL_API_KEY: rawConfig.MISTRAL_API_KEY || 'test-mistral-key',
   DEEPSEEK_API_KEY: rawConfig.DEEPSEEK_API_KEY || 'test-deepseek-key',

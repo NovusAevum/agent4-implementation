@@ -14,16 +14,6 @@ const PROVIDER_CONFIG = {
     apiUrl: 'https://api-inference.huggingface.co/models',
     envVar: 'HF_TOKEN',
   },
-  alibaba_qwen: {
-    model: 'Qwen/Qwen1.5-72B-Chat',
-    apiUrl: 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
-    envVar: 'ALIBABA_QWEN_API_KEY',
-  },
-  kimi: {
-    model: 'kimi-2-8b',
-    apiUrl: 'https://api.moonshot.cn/v1/chat/completions',
-    envVar: 'KIMI_API_KEY',
-  },
   mistral: {
     model: 'mistral-small-latest',
     apiUrl: 'https://api.mistral.ai/v1/chat/completions',
