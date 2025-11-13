@@ -2,7 +2,7 @@ import { HuggingFaceProvider } from '../huggingface';
 import axios from 'axios';
 
 jest.mock('axios');
-const mockedAxios = axios as jest.Mocked<typeof axios>;
+const mockedAxios = axios as jest.MockedFunction<typeof axios>;
 
 describe('HuggingFaceProvider', () => {
   let provider: HuggingFaceProvider;
@@ -60,9 +60,7 @@ describe('HuggingFaceProvider', () => {
 
       const prompt = 'Test prompt';
 
-      await expect(provider.generate(prompt)).rejects.toThrow(
-        'HuggingFace API error'
-      );
+      await expect(provider.generate(prompt)).rejects.toThrow('HuggingFace API error');
     });
 
     it('should handle retry logic for retryable errors', async () => {
@@ -75,15 +73,13 @@ describe('HuggingFaceProvider', () => {
       };
       const mockResponse = { generated_text: 'Test response after retry' };
 
-      mockedAxios
-        .mockRejectedValueOnce(errorResponse)
-        .mockResolvedValueOnce({
-          data: [mockResponse],
-          status: 200,
-          statusText: 'OK',
-          headers: {},
-          config: {},
-        } as any);
+      mockedAxios.mockRejectedValueOnce(errorResponse).mockResolvedValueOnce({
+        data: [mockResponse],
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {},
+      } as any);
 
       const prompt = 'Test prompt';
       const result = await provider.generate(prompt);
@@ -95,7 +91,7 @@ describe('HuggingFaceProvider', () => {
 
   describe('checkHealth', () => {
     it('should return true if the API is healthy', async () => {
-      mockedAxios.post = jest.fn().mockResolvedValueOnce({
+      (axios.post as jest.MockedFunction<typeof axios.post>) = jest.fn().mockResolvedValueOnce({
         data: {},
         status: 200,
         statusText: 'OK',
@@ -106,7 +102,7 @@ describe('HuggingFaceProvider', () => {
       const result = await provider.checkHealth();
 
       expect(result).toBe(true);
-      expect(mockedAxios.post).toHaveBeenCalledWith(
+      expect(axios.post).toHaveBeenCalledWith(
         `${mockApiUrl}/${mockModel}`,
         {},
         expect.objectContaining({
@@ -118,7 +114,9 @@ describe('HuggingFaceProvider', () => {
     });
 
     it('should return false if the API is unhealthy', async () => {
-      mockedAxios.post = jest.fn().mockRejectedValueOnce(new Error('Network error'));
+      (axios.post as jest.MockedFunction<typeof axios.post>) = jest
+        .fn()
+        .mockRejectedValueOnce(new Error('Network error'));
 
       const result = await provider.checkHealth();
 

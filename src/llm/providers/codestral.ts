@@ -16,12 +16,7 @@ export class CodestralProvider extends BaseProvider {
   }
 
   async generate(prompt: string, options: any = {}): Promise<string> {
-    const {
-      max_tokens = 2048,
-      temperature = 0.7,
-      top_p = 1.0,
-      ...otherOptions
-    } = options;
+    const { max_tokens = 2048, temperature = 0.7, top_p = 1.0, ...otherOptions } = options;
 
     const data = {
       model: this.model,

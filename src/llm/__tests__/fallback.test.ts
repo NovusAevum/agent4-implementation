@@ -1,20 +1,12 @@
-// Mock the MockProvider
+// Mock provider helpers
 const mockCheckHealth = jest.fn().mockResolvedValue(true);
 const mockGenerate = jest.fn().mockResolvedValue('Mock response');
 
-// Mock the providers
-jest.mock('../providers/mock', () => ({
-  MockProvider: jest.fn().mockImplementation(() => ({
+// Mock HuggingFace provider
+jest.mock('../providers/huggingface', () => ({
+  HuggingFaceProvider: jest.fn().mockImplementation(() => ({
     checkHealth: mockCheckHealth,
     generate: mockGenerate,
-  })),
-}));
-
-// Mock other providers to fail health checks
-jest.mock('../providers/continue', () => ({
-  ContinueProvider: jest.fn().mockImplementation(() => ({
-    checkHealth: jest.fn().mockResolvedValue(false),
-    generate: jest.fn(),
   })),
 }));
 
@@ -61,7 +53,7 @@ jest.mock('../fallback', () => {
       }
 
       getActiveProviderName() {
-        return 'mock';
+        return 'huggingface';
       }
     },
   };
