@@ -94,48 +94,65 @@
 ### 🎨 Core Differentiators
 
 ```mermaid
-mindmap
-  root((Agent4<br/>Elite MAS))
-    🛡️ Enterprise Reliability
-      Circuit Breaker Pattern
-        5-failure threshold
-        60s cooldown window
-      Exponential Backoff
-        2x retry strategy
-        1s→2s→5s delays
-      Timeout Protection
-        30s hard limits
-        Promise.race() guards
-    🚀 Performance Excellence
-      90.38% Test Coverage
-        391 comprehensive tests
-        100% critical paths
-      Memory Optimized
-        Zero memory leaks
-        Graceful shutdown
-      LLM Response Cache
-        SHA-256 keying
-        LRU eviction
-    🔌 Multi-Provider Ecosystem
-      Hugging Face
-        Mistral-7B primary
-      Mistral AI
-        Fast inference
-      DeepSeek
-        Code specialist
-      OpenRouter
-        Model aggregator
-      Codestral
-        Code completion
-    ⚡ Developer Experience
-      Type-Safe APIs
-        Full TypeScript
-        Strict mode enabled
-      4-Phase Workflow
-        PLAN→DISCOVER→EXECUTE→VALIDATE
-      REST API
-        Express.js powered
-        JSON responses
+graph TB
+    subgraph "🛡️ Enterprise Reliability"
+        A1[Circuit Breaker Pattern]
+        A2[5-failure threshold<br/>60s cooldown window]
+        A3[Exponential Backoff]
+        A4[2x retry strategy<br/>1s to 2s to 5s delays]
+        A5[Timeout Protection]
+        A6[30s hard limits<br/>Promise race guards]
+        A1 --> A2
+        A3 --> A4
+        A5 --> A6
+    end
+
+    subgraph "🚀 Performance Excellence"
+        B1[90.38% Test Coverage]
+        B2[391 comprehensive tests<br/>100% critical paths]
+        B3[Memory Optimized]
+        B4[Zero memory leaks<br/>Graceful shutdown]
+        B5[LLM Response Cache]
+        B6[SHA-256 keying<br/>LRU eviction]
+        B1 --> B2
+        B3 --> B4
+        B5 --> B6
+    end
+
+    subgraph "🔌 Multi-Provider Ecosystem"
+        C1[Hugging Face]
+        C2[Mistral AI]
+        C3[DeepSeek]
+        C4[OpenRouter]
+        C5[Codestral]
+    end
+
+    subgraph "⚡ Developer Experience"
+        D1[Type-Safe APIs]
+        D2[Full TypeScript<br/>Strict mode enabled]
+        D3[4-Phase Workflow]
+        D4[PLAN to DISCOVER<br/>EXECUTE to VALIDATE]
+        D5[REST API]
+        D6[Express.js powered<br/>JSON responses]
+        D1 --> D2
+        D3 --> D4
+        D5 --> D6
+    end
+
+    style A1 fill:#ff6b6b,stroke:#c62828,stroke-width:2px,color:#fff
+    style A3 fill:#ff6b6b,stroke:#c62828,stroke-width:2px,color:#fff
+    style A5 fill:#ff6b6b,stroke:#c62828,stroke-width:2px,color:#fff
+    style B1 fill:#00C851,stroke:#007E33,stroke-width:2px,color:#fff
+    style B3 fill:#00C851,stroke:#007E33,stroke-width:2px,color:#fff
+    style B5 fill:#00C851,stroke:#007E33,stroke-width:2px,color:#fff
+    style C1 fill:#ffe082,stroke:#f57f17,stroke-width:2px,color:#000
+    style C2 fill:#ce93d8,stroke:#6a1b9a,stroke-width:2px,color:#000
+    style C3 fill:#80deea,stroke:#00695c,stroke-width:2px,color:#000
+    style C4 fill:#a5d6a7,stroke:#2e7d32,stroke-width:2px,color:#000
+    style C5 fill:#ffab91,stroke:#d84315,stroke-width:2px,color:#000
+    style D1 fill:#667eea,stroke:#764ba2,stroke-width:2px,color:#fff
+    style D3 fill:#667eea,stroke:#764ba2,stroke-width:2px,color:#fff
+    style D5 fill:#667eea,stroke:#764ba2,stroke-width:2px,color:#fff
 ```
 
 ---
@@ -2015,7 +2032,7 @@ SOFTWARE.
 
 <div align="center">
 
-<img src="https://avatars.githubusercontent.com/u/YOUR_USER_ID?v=4" width="150" style="border-radius: 50%; border: 4px solid #667eea;"/>
+<img src="https://ui-avatars.com/api/?name=Wan+Hanis&size=200&background=667eea&color=fff&bold=true&font-size=0.4" width="150" style="border-radius: 50%; border: 4px solid #667eea;"/>
 
 ### **Wan Mohamad Hanis Bin Wan Hassan**
 #### *NovusAevum*
