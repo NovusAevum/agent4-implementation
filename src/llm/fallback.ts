@@ -69,6 +69,8 @@ export class FallbackLLM {
       const formattedError = ErrorHandler.format(error);
       logger.error('Failed to initialize FallbackLLM', formattedError);
       this.lastError = formattedError;
+      // Ensure no health check interval is running if initialization failed
+      this.destroy();
     });
   }
 

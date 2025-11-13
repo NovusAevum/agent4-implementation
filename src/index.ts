@@ -157,11 +157,11 @@ function gracefulShutdown(signal: string) {
     process.exit(0);
   });
 
-  // Force shutdown after timeout
+  // Force shutdown after timeout (60s to accommodate long-running LLM requests)
   setTimeout(() => {
     logger.error('Graceful shutdown timeout - forcing exit');
     process.exit(1);
-  }, 10000);
+  }, 60000); // 60 seconds to allow LLM requests (which can take 30+ seconds) to complete
 }
 
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));

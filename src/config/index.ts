@@ -76,9 +76,35 @@ export const config = {
   ENABLE_METRICS: rawConfig.ENABLE_METRICS !== 'false',
   ENABLE_TRACING: rawConfig.ENABLE_TRACING !== 'false',
 
-  // Rate Limiting & Security
-  RATE_LIMIT_WINDOW_MS: parseInt(rawConfig.RATE_LIMIT_WINDOW_MS, 10),
-  RATE_LIMIT_MAX_REQUESTS: parseInt(rawConfig.RATE_LIMIT_MAX_REQUESTS, 10),
+  // Rate Limiting & Security (with validation)
+  RATE_LIMIT_WINDOW_MS: (() => {
+    const value = parseInt(rawConfig.RATE_LIMIT_WINDOW_MS, 10);
+    if (isNaN(value) || value <= 0) {
+      throw new Error(
+        `Invalid RATE_LIMIT_WINDOW_MS: "${rawConfig.RATE_LIMIT_WINDOW_MS}". Must be a positive integer (in milliseconds)`
+      );
+    }
+    if (value < 1000) {
+      throw new Error(
+        `RATE_LIMIT_WINDOW_MS too small: ${value}ms. Must be at least 1000ms (1 second)`
+      );
+    }
+    return value;
+  })(),
+  RATE_LIMIT_MAX_REQUESTS: (() => {
+    const value = parseInt(rawConfig.RATE_LIMIT_MAX_REQUESTS, 10);
+    if (isNaN(value) || value <= 0) {
+      throw new Error(
+        `Invalid RATE_LIMIT_MAX_REQUESTS: "${rawConfig.RATE_LIMIT_MAX_REQUESTS}". Must be a positive integer`
+      );
+    }
+    if (value > 10000) {
+      throw new Error(
+        `RATE_LIMIT_MAX_REQUESTS too high: ${value}. Maximum recommended value is 10000 to prevent abuse`
+      );
+    }
+    return value;
+  })(),
   CORS_ORIGIN: rawConfig.CORS_ORIGIN,
 };
 
