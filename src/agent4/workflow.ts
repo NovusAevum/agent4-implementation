@@ -87,6 +87,11 @@ PLAN:`;
   }
 
   async discover(context: any = {}): Promise<any> {
+    // Validate that plan phase completed
+    if (!this.state.plan) {
+      throw new Error('Cannot run discover phase: plan phase not completed');
+    }
+
     try {
       const prompt = `You are Agent 4 in DISCOVERY phase.
 
@@ -116,6 +121,14 @@ Provide a structured JSON response with your findings.`;
   }
 
   async execute(actions: any[] = []): Promise<any> {
+    // Validate that previous phases completed
+    if (!this.state.plan) {
+      throw new Error('Cannot run execute phase: plan phase not completed');
+    }
+    if (!this.state.discovery) {
+      throw new Error('Cannot run execute phase: discover phase not completed');
+    }
+
     try {
       const prompt = `You are Agent 4 in EXECUTION phase.
 
@@ -147,6 +160,14 @@ Provide a structured JSON response with the execution results.`;
   }
 
   async validate(): Promise<any> {
+    // Validate that previous phases completed
+    if (!this.state.plan) {
+      throw new Error('Cannot run validate phase: plan phase not completed');
+    }
+    if (!this.state.execution) {
+      throw new Error('Cannot run validate phase: execute phase not completed');
+    }
+
     try {
       const prompt = `You are Agent 4 in VALIDATION phase.
 

@@ -96,6 +96,17 @@ export class FallbackLLM {
     );
   }
 
+  /**
+   * Stop health checks and clean up resources
+   * Call this before destroying the FallbackLLM instance to prevent memory leaks
+   */
+  destroy(): void {
+    if (this.healthCheckInterval) {
+      clearInterval(this.healthCheckInterval);
+      this.healthCheckInterval = null;
+    }
+  }
+
   private async checkAllProvidersHealth(): Promise<void> {
     await Promise.all(
       this.providers.map(async (providerInfo) => {
@@ -235,24 +246,45 @@ export class FallbackLLM {
     }
 
     let lastError: Error | null = null;
+    let activeProviderName = 'none';
 
     // Try each provider in order
-    for (const { name, provider } of this.providers) {
+    for (const providerInfo of this.providers) {
       try {
-        const result = await provider.generate(prompt, options);
+        // Update statistics before attempt
+        providerInfo.totalRequests++;
+        providerInfo.lastUsed = Date.now();
+
+        const result = await providerInfo.provider.generate(prompt, options);
+
+        // Success - mark provider as healthy and return
+        providerInfo.isHealthy = true;
+        providerInfo.lastError = null;
+        activeProviderName = providerInfo.name;
+
         return result;
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        console.error(`Error with ${name} provider:`, errorMessage);
+        console.error(`Error with ${providerInfo.name} provider:`, errorMessage);
+
+        // Update failure statistics
+        providerInfo.failedRequests++;
+        providerInfo.errorCount++;
+        providerInfo.isHealthy = false;
+        providerInfo.lastError = error instanceof Error ? error : new Error(String(error));
+
         lastError = error instanceof Error ? error : new Error(String(error));
       }
     }
 
+    this.lastError = lastError;
     throw lastError || new Error('All providers failed to generate a response');
   }
 
   getActiveProviderName(): string {
-    return this.providers[0]?.name || 'none';
+    // Return the first healthy provider, or the first provider if none are healthy
+    const healthyProvider = this.providers.find((p) => p.isHealthy);
+    return healthyProvider?.name || this.providers[0]?.name || 'none';
   }
 
   getActiveProvider(): LLMProvider | null {

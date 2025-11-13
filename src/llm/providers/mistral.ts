@@ -34,9 +34,12 @@ export class MistralProvider extends BaseProvider {
         },
       });
 
-      return response.data.choices[0].message.content;
+      const result = response.data as any;
+      return result.choices?.[0]?.message?.content || '';
     } catch (error) {
-      throw new Error(`Mistral API error: ${error}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Error calling Mistral API:', errorMessage);
+      throw new Error(`Failed to generate text: ${errorMessage}`);
     }
   }
 }

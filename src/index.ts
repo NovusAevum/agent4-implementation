@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
+import { z } from 'zod';
 import { config } from './config/index';
 import { Agent4Workflow } from './agent4/workflow';
 
@@ -7,9 +8,18 @@ import { Agent4Workflow } from './agent4/workflow';
 const app = express();
 const PORT = config.PORT;
 
+// Request validation schema
+const executeRequestSchema = z.object({
+  task: z
+    .string()
+    .min(1, 'Task cannot be empty')
+    .max(10000, 'Task is too long (max 10000 characters)'),
+  context: z.record(z.unknown()).optional().default({}),
+});
+
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '1mb' })); // Limit request body size
 
 // Health check endpoint
 app.get('/health', (_req: Request, res: Response) => {
@@ -22,17 +32,24 @@ app.get('/health', (_req: Request, res: Response) => {
 
 // Main Agent4 API endpoint
 app.post('/api/agent4/execute', async (req: Request, res: Response) => {
-  const { task, context = {} } = req.body;
-
-  if (!task) {
-    res.status(400).json({
-      success: false,
-      error: 'Task is required',
-    });
-    return;
-  }
-
   try {
+    // Validate request body
+    const validationResult = executeRequestSchema.safeParse(req.body);
+
+    if (!validationResult.success) {
+      res.status(400).json({
+        success: false,
+        error: 'Invalid request',
+        details: validationResult.error.errors.map((e) => ({
+          field: e.path.join('.'),
+          message: e.message,
+        })),
+      });
+      return;
+    }
+
+    const { task, context } = validationResult.data;
+
     const agent = new Agent4Workflow();
     const result = await agent.run(task, context);
 
@@ -42,7 +59,14 @@ app.post('/api/agent4/execute', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Agent4 execution error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    // Don't expose internal error details in production
+    const errorMessage =
+      config.NODE_ENV === 'production'
+        ? 'An error occurred while processing your request'
+        : error instanceof Error
+          ? error.message
+          : 'Internal server error';
+
     res.status(500).json({
       success: false,
       error: errorMessage,

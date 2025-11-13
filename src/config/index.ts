@@ -40,7 +40,10 @@ export const config = {
 
   // LLM Providers
   DEFAULT_LLM_PROVIDER: rawConfig.DEFAULT_LLM_PROVIDER,
-  FALLBACK_ORDER: rawConfig.FALLBACK_ORDER.split(',').map((s) => s.trim()),
+  FALLBACK_ORDER: rawConfig.FALLBACK_ORDER
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0),
 
   // API Keys (with test defaults for development)
   HF_TOKEN: rawConfig.HF_TOKEN || 'test-hf-token',
