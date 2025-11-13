@@ -6,6 +6,9 @@ import { OpenRouterProvider } from './providers/openrouter';
 import { CodestralProvider } from './providers/codestral';
 import { config } from '../config/index';
 
+// Constants
+const HEALTH_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+
 // Provider configurations with all available models
 const PROVIDER_CONFIG = {
   huggingface: {
@@ -91,7 +94,7 @@ export class FallbackLLM {
       async () => {
         await this.checkAllProvidersHealth();
       },
-      5 * 60 * 1000
+      HEALTH_CHECK_INTERVAL_MS
     );
   }
 
@@ -145,8 +148,13 @@ export class FallbackLLM {
             const providerConfig = PROVIDER_CONFIG[providerName as keyof typeof PROVIDER_CONFIG];
             const apiKey = config[providerConfig.envVar as keyof typeof config] as string;
 
-            if (!apiKey || apiKey.startsWith('test-')) {
-              console.warn(`No valid API key found for provider: ${providerName}`);
+            // In test/development, allow test keys; in production, require real keys
+            if (!apiKey) {
+              console.warn(`No API key found for provider: ${providerName}`);
+              return null;
+            }
+            if (config.NODE_ENV === 'production' && apiKey.startsWith('test-')) {
+              console.warn(`Test API key not allowed in production for provider: ${providerName}`);
               return null;
             }
 
@@ -241,21 +249,19 @@ export class FallbackLLM {
     }
 
     let lastError: Error | null = null;
-    let activeProviderName = 'none';
 
     // Try each provider in order
     for (const providerInfo of this.providers) {
       try {
-        // Update statistics before attempt
-        providerInfo.totalRequests++;
         providerInfo.lastUsed = Date.now();
 
         const result = await providerInfo.provider.generate(prompt, options);
 
-        // Success - mark provider as healthy and return
+        // Success - mark provider as healthy and update statistics
         providerInfo.isHealthy = true;
         providerInfo.lastError = null;
-        activeProviderName = providerInfo.name;
+        providerInfo.totalRequests++;
+        this.lastError = null; // Clear stale errors on success
 
         return result;
       } catch (error) {

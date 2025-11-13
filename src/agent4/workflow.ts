@@ -29,8 +29,9 @@ export class Agent4Workflow {
   private llm: FallbackLLM;
   private state: WorkflowState;
 
-  constructor() {
-    this.llm = new FallbackLLM();
+  constructor(llm?: FallbackLLM) {
+    // Use injected LLM or create new one (for testing/backward compatibility)
+    this.llm = llm || new FallbackLLM();
     this.state = {
       metadata: {
         startTime: Date.now(),
@@ -88,7 +89,7 @@ PLAN:`;
 
   async discover(context: any = {}): Promise<any> {
     // Validate that plan phase completed
-    if (!this.state.plan) {
+    if (!this.state.plan || this.state.plan.trim() === '') {
       throw new Error('Cannot run discover phase: plan phase not completed');
     }
 
@@ -122,7 +123,7 @@ Provide a structured JSON response with your findings.`;
 
   async execute(actions: any[] = []): Promise<any> {
     // Validate that previous phases completed
-    if (!this.state.plan) {
+    if (!this.state.plan || this.state.plan.trim() === '') {
       throw new Error('Cannot run execute phase: plan phase not completed');
     }
     if (!this.state.discovery) {
@@ -161,8 +162,11 @@ Provide a structured JSON response with the execution results.`;
 
   async validate(): Promise<any> {
     // Validate that previous phases completed
-    if (!this.state.plan) {
+    if (!this.state.plan || this.state.plan.trim() === '') {
       throw new Error('Cannot run validate phase: plan phase not completed');
+    }
+    if (!this.state.discovery) {
+      throw new Error('Cannot run validate phase: discover phase not completed');
     }
     if (!this.state.execution) {
       throw new Error('Cannot run validate phase: execute phase not completed');
