@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { config } from './config/index';
 import { Agent4Workflow } from './agent4/workflow';
 import { FallbackLLM } from './llm/fallback';
-import { logger, ErrorHandler, metrics } from './utils';
+import { logger, ErrorHandler, metrics, llmCache } from './utils';
 import { initTelemetry } from './telemetry';
 
 // Initialize OpenTelemetry (if enabled)
@@ -196,16 +196,22 @@ function gracefulShutdown(signal: string) {
 
   server.close(() => {
     logger.info('HTTP server closed');
+
+    // Clean up all resources to prevent memory leaks
     sharedLLM.destroy();
+    llmCache.destroy();
+
     logger.info('Resources cleaned up');
     process.exit(0);
   });
 
   // Force shutdown after timeout (60s to accommodate long-running LLM requests)
-  setTimeout(() => {
+  // Use unref() to allow process to exit naturally if all work completes before timeout
+  const forceExitTimer = setTimeout(() => {
     logger.error('Graceful shutdown timeout - forcing exit');
     process.exit(1);
   }, 60000); // 60 seconds to allow LLM requests (which can take 30+ seconds) to complete
+  forceExitTimer.unref();
 }
 
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
