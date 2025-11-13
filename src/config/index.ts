@@ -19,6 +19,11 @@ const envSchema = z.object({
   LOG_LEVEL: z.string().default('info'),
   ENABLE_METRICS: z.string().default('true'),
   ENABLE_TRACING: z.string().default('true'),
+
+  // Rate Limiting
+  RATE_LIMIT_WINDOW_MS: z.string().default('900000'), // 15 minutes
+  RATE_LIMIT_MAX_REQUESTS: z.string().default('100'),
+  CORS_ORIGIN: z.string().default('*'),
 });
 
 const rawConfig = envSchema.parse({
@@ -30,6 +35,9 @@ const rawConfig = envSchema.parse({
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',
   ENABLE_METRICS: process.env.ENABLE_METRICS || 'true',
   ENABLE_TRACING: process.env.ENABLE_TRACING || 'true',
+  RATE_LIMIT_WINDOW_MS: process.env.RATE_LIMIT_WINDOW_MS || '900000',
+  RATE_LIMIT_MAX_REQUESTS: process.env.RATE_LIMIT_MAX_REQUESTS || '100',
+  CORS_ORIGIN: process.env.CORS_ORIGIN || '*',
 });
 
 // Transform and enhance the config with proper types and defaults
@@ -44,12 +52,18 @@ export const config = {
     .map((s) => s.trim())
     .filter((s) => s.length > 0),
 
-  // API Keys (with test defaults for development)
-  HF_TOKEN: rawConfig.HF_TOKEN || 'test-hf-token',
-  MISTRAL_API_KEY: rawConfig.MISTRAL_API_KEY || 'test-mistral-key',
-  DEEPSEEK_API_KEY: rawConfig.DEEPSEEK_API_KEY || 'test-deepseek-key',
-  OPENROUTER_API_KEY: rawConfig.OPENROUTER_API_KEY || 'test-openrouter-key',
-  CODESTRAL_API_KEY: rawConfig.CODESTRAL_API_KEY || 'test-codestral-key',
+  // API Keys (test defaults only for development/test environments)
+  HF_TOKEN: rawConfig.HF_TOKEN || (rawConfig.NODE_ENV === 'production' ? '' : 'test-hf-token'),
+  MISTRAL_API_KEY:
+    rawConfig.MISTRAL_API_KEY || (rawConfig.NODE_ENV === 'production' ? '' : 'test-mistral-key'),
+  DEEPSEEK_API_KEY:
+    rawConfig.DEEPSEEK_API_KEY || (rawConfig.NODE_ENV === 'production' ? '' : 'test-deepseek-key'),
+  OPENROUTER_API_KEY:
+    rawConfig.OPENROUTER_API_KEY ||
+    (rawConfig.NODE_ENV === 'production' ? '' : 'test-openrouter-key'),
+  CODESTRAL_API_KEY:
+    rawConfig.CODESTRAL_API_KEY ||
+    (rawConfig.NODE_ENV === 'production' ? '' : 'test-codestral-key'),
 
   // API Timeouts (in ms)
   REQUEST_TIMEOUT: 30000, // 30 seconds
@@ -61,6 +75,11 @@ export const config = {
   // Feature flags
   ENABLE_METRICS: rawConfig.ENABLE_METRICS !== 'false',
   ENABLE_TRACING: rawConfig.ENABLE_TRACING !== 'false',
+
+  // Rate Limiting & Security
+  RATE_LIMIT_WINDOW_MS: parseInt(rawConfig.RATE_LIMIT_WINDOW_MS, 10),
+  RATE_LIMIT_MAX_REQUESTS: parseInt(rawConfig.RATE_LIMIT_MAX_REQUESTS, 10),
+  CORS_ORIGIN: rawConfig.CORS_ORIGIN,
 };
 
 export type Config = typeof config;

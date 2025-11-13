@@ -41,6 +41,7 @@ export class OpenRouterProvider extends BaseProvider {
           'HTTP-Referer': this.siteUrl,
           'X-Title': this.appName,
         },
+        timeout: 30000, // 30 seconds
       });
 
       const result = response.data as any;

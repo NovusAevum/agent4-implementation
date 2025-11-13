@@ -32,6 +32,7 @@ export class MistralProvider extends BaseProvider {
           Authorization: `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
         },
+        timeout: 30000, // 30 seconds
       });
 
       const result = response.data as any;
