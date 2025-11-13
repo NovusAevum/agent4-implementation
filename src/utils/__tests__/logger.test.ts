@@ -129,7 +129,7 @@ describe('Logger', () => {
 
       const logs = testLogger.getLogs();
       expect(logs.length).toBe(3);
-      expect(logs.map(l => l.level)).toEqual(['INFO', 'WARN', 'ERROR']);
+      expect(logs.map((l) => l.level)).toEqual(['INFO', 'WARN', 'ERROR']);
     });
 
     it('should log only ERROR when level is ERROR', () => {
@@ -268,53 +268,29 @@ describe('Logger', () => {
     it('should output DEBUG logs to console.log', () => {
       testLogger.debug('debug message');
 
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('[DEBUG]'),
-        ''
-      );
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('debug message'),
-        ''
-      );
+      expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('[DEBUG]'), '');
+      expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('debug message'), '');
     });
 
     it('should output INFO logs to console.log', () => {
       testLogger.info('info message');
 
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('[INFO]'),
-        ''
-      );
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('info message'),
-        ''
-      );
+      expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('[INFO]'), '');
+      expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('info message'), '');
     });
 
     it('should output WARN logs to console.warn', () => {
       testLogger.warn('warning message');
 
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('[WARN]'),
-        ''
-      );
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('warning message'),
-        ''
-      );
+      expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('[WARN]'), '');
+      expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('warning message'), '');
     });
 
     it('should output ERROR logs to console.error', () => {
       testLogger.error('error message');
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('[ERROR]'),
-        ''
-      );
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('error message'),
-        ''
-      );
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('[ERROR]'), '');
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('error message'), '');
     });
 
     it('should include metadata in console output', () => {
@@ -335,7 +311,7 @@ describe('Logger', () => {
         expect.stringContaining('error with exception'),
         expect.objectContaining({
           message: 'Test error',
-          name: 'Error'
+          name: 'Error',
         })
       );
     });
@@ -482,7 +458,7 @@ describe('Logger', () => {
     it('should filter logs by level', () => {
       const infoLogs = testLogger.getLogs({ level: 'INFO' });
       expect(infoLogs.length).toBe(2);
-      expect(infoLogs.every(log => log.level === 'INFO')).toBe(true);
+      expect(infoLogs.every((log) => log.level === 'INFO')).toBe(true);
     });
 
     it('should filter DEBUG logs', () => {
@@ -524,10 +500,10 @@ describe('Logger', () => {
 
       const filtered = testLogger.getLogs({
         level: 'INFO',
-        since: cutoffTime
+        since: cutoffTime,
       });
 
-      expect(filtered.every(log => log.level === 'INFO')).toBe(true);
+      expect(filtered.every((log) => log.level === 'INFO')).toBe(true);
     });
 
     it('should return empty array when no logs match filter', () => {
@@ -622,10 +598,10 @@ describe('Logger', () => {
           profile: {
             name: 'John',
             settings: {
-              theme: 'dark'
-            }
-          }
-        }
+              theme: 'dark',
+            },
+          },
+        },
       };
 
       testLogger.info('nested metadata', nestedMeta);
@@ -638,7 +614,10 @@ describe('Logger', () => {
       const arrayMeta = {
         items: [1, 2, 3, 4, 5],
         tags: ['tag1', 'tag2'],
-        matrix: [[1, 2], [3, 4]]
+        matrix: [
+          [1, 2],
+          [3, 4],
+        ],
       };
 
       testLogger.info('array metadata', arrayMeta);
@@ -653,7 +632,7 @@ describe('Logger', () => {
         undefinedValue: undefined,
         emptyString: '',
         zero: 0,
-        false: false
+        false: false,
       };
 
       testLogger.info('mixed metadata', meta);
@@ -764,7 +743,7 @@ describe('Logger', () => {
       instance.warn('should appear');
 
       const logs = instance.getLogs();
-      expect(logs.some(log => log.level === 'WARN')).toBe(true);
+      expect(logs.some((log) => log.level === 'WARN')).toBe(true);
     });
 
     it('should default to INFO for invalid log levels', () => {
@@ -775,8 +754,8 @@ describe('Logger', () => {
       instance.info('should appear');
 
       const logs = instance.getLogs();
-      expect(logs.some(log => log.level === 'DEBUG')).toBe(false);
-      expect(logs.some(log => log.level === 'INFO')).toBe(true);
+      expect(logs.some((log) => log.level === 'DEBUG')).toBe(false);
+      expect(logs.some((log) => log.level === 'INFO')).toBe(true);
     });
 
     it('should default to INFO when LOG_LEVEL is not set', () => {
@@ -787,7 +766,7 @@ describe('Logger', () => {
       instance.info('should appear');
 
       const logs = instance.getLogs();
-      expect(logs.some(log => log.level === 'DEBUG')).toBe(false);
+      expect(logs.some((log) => log.level === 'DEBUG')).toBe(false);
     });
   });
 
@@ -856,7 +835,7 @@ describe('Logger', () => {
         user: { id: 123, name: 'Test User' },
         request: { method: 'GET', url: '/api/test' },
         response: { status: 200, body: { data: [1, 2, 3] } },
-        performance: { duration: 150, memory: 1024 }
+        performance: { duration: 150, memory: 1024 },
       };
 
       testLogger.info('complex log', complexMeta);

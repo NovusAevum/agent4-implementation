@@ -39,9 +39,7 @@ describe('ResponseParser', () => {
 
     it('should return empty string when message is undefined', () => {
       const response: LLMResponse = {
-        choices: [
-          {} as any,
-        ],
+        choices: [{} as any],
       };
 
       expect(ResponseParser.extractContent(response)).toBe('');
