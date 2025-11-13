@@ -1,9 +1,6 @@
 // Base and Core Providers
 export * from './base';
 
-// Mock Provider (for testing)
-export * from './mock';
-
 // Real Providers
 export * from './huggingface';
 export * from './mistral';
