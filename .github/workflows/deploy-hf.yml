@@ -112,20 +112,20 @@ jobs:
         echo "🔗 Space URL: https://huggingface.co/spaces/LetsTryGPT/agent4-implementation"
         echo "View your space at: https://huggingface.co/spaces/${{ env.HF_SPACE }}"
         
-    - name: Update README with Space URL
-      if: success()
-      run: |
-        SPACE_URL="https://huggingface.co/spaces/${{ env.HF_SPACE }}"
-        echo "## 🚀 Live Demo" >> README.md
-        echo "" >> README.md
-        echo "The application is deployed to Hugging Face Spaces:" >> README.md
-        echo "" >> README.md
-        echo "[![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/${{ env.HF_SPACE }})" >> README.md
-        echo "" >> README.md
-        echo "🔗 [Open in Spaces]($SPACE_URL)" >> README.md
+    # - name: Update README with Space URL
+    #   if: success()
+    #   run: |
+    #     SPACE_URL="https://huggingface.co/spaces/${{ env.HF_SPACE }}"
+    #     echo "## 🚀 Live Demo" >> README.md
+    #     echo "" >> README.md
+    #     echo "The application is deployed to Hugging Face Spaces:" >> README.md
+    #     echo "" >> README.md
+    #     echo "[![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/${{ env.HF_SPACE }})" >> README.md
+    #     echo "" >> README.md
+    #     echo "🔗 [Open in Spaces]($SPACE_URL)" >> README.md
         
-        git config --global user.name 'GitHub Actions'
-        git config --global user.email 'actions@github.com'
-        git add README.md
-        git commit -m "docs: Update README with Hugging Face Space URL" || echo "No changes to commit"
-        git push || echo "No changes to push"
+    #     git config --global user.name 'GitHub Actions'
+    #     git config --global user.email 'actions@github.com'
+    #     git add README.md
+    #     git commit -m "docs: Update README with Hugging Face Space URL" || echo "No changes to commit"
+    #     git push || echo "No changes to push"
