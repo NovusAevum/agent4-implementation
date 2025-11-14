@@ -63,7 +63,7 @@ jobs:
     needs: build
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -73,16 +73,55 @@ jobs:
       with:
         name: build
         path: .
-    
+
+    # Check if Vercel secrets are configured before attempting deployment
+    - name: Check Vercel Configuration
+      id: check_secrets
+      run: |
+        if [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
+          echo "⚠️  VERCEL_TOKEN not configured"
+          echo "secrets_configured=false" >> $GITHUB_OUTPUT
+        elif [ -z "${{ secrets.VERCEL_ORG_ID }}" ]; then
+          echo "⚠️  VERCEL_ORG_ID not configured"
+          echo "secrets_configured=false" >> $GITHUB_OUTPUT
+        elif [ -z "${{ secrets.VERCEL_PROJECT_ID }}" ]; then
+          echo "⚠️  VERCEL_PROJECT_ID not configured"
+          echo "secrets_configured=false" >> $GITHUB_OUTPUT
+        else
+          echo "✅ All Vercel secrets configured"
+          echo "secrets_configured=true" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Deployment Info
+      if: steps.check_secrets.outputs.secrets_configured == 'false'
+      run: |
+        echo "## ⚠️  Vercel Deployment Skipped" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Vercel deployment requires the following secrets to be configured:" >> $GITHUB_STEP_SUMMARY
+        echo "- \`VERCEL_TOKEN\`: Your Vercel authentication token" >> $GITHUB_STEP_SUMMARY
+        echo "- \`VERCEL_ORG_ID\`: Your Vercel organization ID" >> $GITHUB_STEP_SUMMARY
+        echo "- \`VERCEL_PROJECT_ID\`: Your Vercel project ID" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Configure these in: Settings > Secrets and variables > Actions" >> $GITHUB_STEP_SUMMARY
+
     - name: Install Vercel CLI
+      if: steps.check_secrets.outputs.secrets_configured == 'true'
       run: npm install --global vercel@latest
-    
+
     - name: Deploy to Vercel
+      if: steps.check_secrets.outputs.secrets_configured == 'true'
       run: |
         echo "VERCEL_ORG_ID=${{ secrets.VERCEL_ORG_ID }}" >> .env
         echo "VERCEL_PROJECT_ID=${{ secrets.VERCEL_PROJECT_ID }}" >> .env
-        vercel --prod --confirm --token ${{ secrets.VERCEL_TOKEN }}
+        vercel --prod --confirm --token "${{ secrets.VERCEL_TOKEN }}"
       env:
         VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
         VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+    - name: Deployment Success
+      if: steps.check_secrets.outputs.secrets_configured == 'true'
+      run: |
+        echo "## ✅ Vercel Deployment Successful" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Your application has been deployed to Vercel!" >> $GITHUB_STEP_SUMMARY
