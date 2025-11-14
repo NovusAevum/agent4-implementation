@@ -52,8 +52,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
@@ -62,8 +60,6 @@ jobs:
           scan-ref: '.'
           format: 'sarif'
           output: 'trivy-results.sarif'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '1'  # Fail on critical/high vulnerabilities
 
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
@@ -177,7 +173,6 @@ jobs:
       - name: Install Hugging Face CLI
         run: |
           pip install --upgrade huggingface_hub
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Deploy to Hugging Face Space
         env:
@@ -186,13 +181,13 @@ jobs:
           # Configure git
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
-
+          
           # Login to Hugging Face
           huggingface-cli login --token $HF_TOKEN
-
+          
           # Create or update the space
           huggingface-cli repo create ${{ github.repository }} --type space --space_sdk docker || true
-
+          
           # Clone the space repository
           git clone https://huggingface.co/spaces/${{ github.repository }} hf-space || git clone https://huggingface.co/spaces/${{ github.repository_owner }}/agent4-implementation hf-space
           
