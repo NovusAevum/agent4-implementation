@@ -7,6 +7,7 @@ import { Agent4Workflow } from './agent4/workflow';
 import { FallbackLLM } from './llm/fallback';
 import { logger, ErrorHandler, metrics, llmCache } from './utils';
 import { initTelemetry } from './telemetry';
+import { securityMiddleware } from './middleware';
 
 // Initialize OpenTelemetry (if enabled)
 initTelemetry();
@@ -14,6 +15,9 @@ initTelemetry();
 // Initialize Express app
 const app = express();
 const PORT = config.PORT;
+
+// Disable X-Powered-By header to prevent server fingerprinting
+app.disable('x-powered-by');
 
 // Create singleton FallbackLLM instance to prevent memory leaks
 // (Each request reuses the same instance instead of creating new ones)
@@ -28,7 +32,13 @@ const executeRequestSchema = z.object({
   context: z.record(z.unknown()).optional().default({}),
 });
 
-// Middleware
+// ===== MIDDLEWARE STACK =====
+// Order is critical for security and performance
+
+// 1. Enterprise Security Headers (OWASP recommendations)
+app.use(securityMiddleware);
+
+// 2. CORS Configuration
 app.use(
   cors({
     origin: config.CORS_ORIGIN === '*' ? '*' : config.CORS_ORIGIN.split(','),
@@ -41,16 +51,18 @@ app.use(
     optionsSuccessStatus: 204, // Some legacy browsers choke on 204
   })
 );
-app.use(express.json({ limit: '1mb' })); // Limit request body size
 
-// Request ID middleware for error tracking
+// 3. Body Parser with size limits (prevent DoS via large payloads)
+app.use(express.json({ limit: '1mb' }));
+
+// 4. Request ID middleware for distributed tracing
 app.use((req, _res, next) => {
   req.headers['x-request-id'] =
     req.headers['x-request-id'] || `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   next();
 });
 
-// Rate limiting middleware
+// 5. Rate limiting middleware (DDoS protection)
 const limiter = rateLimit({
   windowMs: config.RATE_LIMIT_WINDOW_MS,
   max: config.RATE_LIMIT_MAX_REQUESTS,
@@ -58,8 +70,8 @@ const limiter = rateLimit({
     success: false,
     error: 'Too many requests from this IP, please try again later.',
   },
-  standardHeaders: true,
-  legacyHeaders: false,
+  standardHeaders: true, // RFC 7230 compliant
+  legacyHeaders: false, // Disable X-RateLimit-* headers
 });
 
 app.use('/api/', limiter);
