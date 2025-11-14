@@ -166,11 +166,11 @@ app.post('/api/agent4/execute', async (req: Request, res: Response) => {
 });
 
 // Start the server
-const server = app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, () => {
   logger.info('Agent4 server started', {
     port: PORT,
     environment: config.NODE_ENV,
-    url: `http://0.0.0.0:${PORT}`,
+    url: `http://localhost:${PORT}`,
   });
 });
 
