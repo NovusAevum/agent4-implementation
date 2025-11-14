@@ -132,7 +132,7 @@ jobs:
         with:
           python-version: '3.10'
       - name: Install Hugging Face CLI
-        run: pip install --upgrade huggingface-hub
+        run: pip install --upgrade huggingface_hub
       - name: Deploy to Hugging Face Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
@@ -156,7 +156,7 @@ jobs:
           colorFrom: blue
           colorTo: green
           sdk: docker
-          app_port: 3000
+          app_port: 7860
           pinned: false
           ---
           # Agent 4 Multi-LLM Implementation
