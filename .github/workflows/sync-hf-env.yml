@@ -18,7 +18,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install huggingface_hub
+          pip install huggingface-hub
 
       - name: Sync environment variables to Hugging Face Space
         env:
@@ -47,7 +47,7 @@ jobs:
               'KIMI_API_KEY': os.environ.get('KIMI_API_KEY', ''),
               'CODECOPILOT_KEY': os.environ.get('CODECOPILOT_KEY', ''),
               'NODE_ENV': 'production',
-              'PORT': '3000',
+              'PORT': '7860',
               'DEFAULT_LLM_PROVIDER': 'continue',
               'FALLBACK_ORDER': 'continue,alibaba,kimi,codestral'
           }
