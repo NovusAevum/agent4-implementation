@@ -22,7 +22,7 @@ env_vars:
   - DEFAULT_LLM_PROVIDER=huggingface
   - FALLBACK_ORDER=huggingface,mistral,deepseek,openrouter,codestral
   - LOG_LEVEL=info
-  - CORS_ORIGIN=*
+  - CORS_ORIGIN=https://huggingface.co
   - RATE_LIMIT_WINDOW_MS=900000
   - RATE_LIMIT_MAX_REQUESTS=100
 
@@ -95,7 +95,7 @@ security:
 # Networking
 networking:
   ports:
-    - 3000:3000
+    - 7860:7860
   hostname: app
   domainname: hf.space
 
