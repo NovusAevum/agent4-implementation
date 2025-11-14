@@ -27,10 +27,7 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
   );
 
   // Permissions Policy (formerly Feature-Policy)
-  res.setHeader(
-    'Permissions-Policy',
-    'camera=(), microphone=(), geolocation=(), payment=()'
-  );
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
 
   // Strict Transport Security (HSTS) - Only if behind HTTPS
   // 2 years max-age with preload for production
@@ -134,7 +131,7 @@ export function validateClientIP(req: Request, _res: Response, next: NextFunctio
 
   // Detect potential IP spoofing attempts
   if (forwardedFor && typeof forwardedFor === 'string') {
-    const ips = forwardedFor.split(',').map(ip => ip.trim());
+    const ips = forwardedFor.split(',').map((ip) => ip.trim());
     if (ips.length > 5) {
       logger.warn('Suspicious X-Forwarded-For chain detected', {
         requestId,

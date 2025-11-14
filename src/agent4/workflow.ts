@@ -278,7 +278,7 @@ Provide a structured JSON response with the validation results.`;
   private safeJsonParse(jsonString: string): Record<string, unknown> | string {
     try {
       return JSON.parse(jsonString) as Record<string, unknown>;
-    } catch (e) {
+    } catch {
       // If parsing fails, return the original string
       return jsonString;
     }
