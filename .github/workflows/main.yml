@@ -132,7 +132,7 @@ jobs:
         with:
           python-version: '3.10'
       - name: Install Hugging Face CLI
-        run: pip install --upgrade huggingface_hub
+        run: pip install --upgrade huggingface-hub
       - name: Deploy to Hugging Face Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}

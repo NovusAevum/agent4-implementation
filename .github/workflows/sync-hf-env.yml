@@ -18,7 +18,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install huggingface_hub
+          pip install huggingface-hub
 
       - name: Sync environment variables to Hugging Face Space
         env:
