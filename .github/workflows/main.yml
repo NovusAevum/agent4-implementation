@@ -10,6 +10,8 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  HF_USERNAME: LetsTryGPT  # Your Hugging Face username
+  HF_SPACE_NAME: agent4-implementation
 
 jobs:
   # Job 1: Run tests and linting
@@ -19,22 +21,17 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
-
       - name: Install dependencies
         run: npm ci
-
       - name: Run linter
         run: npm run lint
-
       - name: Run tests
         run: npm test
-
       - name: Upload coverage
         uses: actions/upload-artifact@v4
         if: always()
@@ -52,7 +49,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
@@ -60,13 +56,11 @@ jobs:
           scan-ref: '.'
           format: 'sarif'
           output: 'trivy-results.sarif'
-
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: 'trivy-results.sarif'
-
       - name: Check for secrets with TruffleHog
         uses: trufflesecurity/trufflehog@main
         with:
@@ -83,19 +77,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
-
       - name: Install dependencies
         run: npm ci
-
       - name: Build application
         run: npm run build
-
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -105,65 +95,31 @@ jobs:
 
   # Job 4: Build and push Docker image
   docker:
-   - name: Configure and Deploy to Hugging Face
-  run: |
-    # Install huggingface_hub
-    pip install -U huggingface-hub
-
-    # Configure git
-    git config --global user.email "github-actions[bot]@users.noreply.github.com"
-    git config --global user.name "github-actions[bot]"
-
-    # Login to Hugging Face
-    hf login --token ${{ secrets.HF_TOKEN }}
-
-    # Create or update the space (use hf repo create)
-    hf repo create NovusAevum/agent4-implementation --repo-type space --space_sdk docker || true
-
-    # Clone the space repository
-    git clone https://huggingface.co/spaces/NovusAevum/agent4-implementation hf-space || git clone https://huggingface.co/spaces/NovusAevum/agent4-implementation hf-space
-
-    cd hf-space
-
-    # Copy necessary files
-    cp -r ../Dockerfile ../huggingface.yaml ../package*.json ../tsconfig.json ../src ../dist ./ || cp -r ../* ./
-
-    # Create README for HF Space
-    cat > README.md << 'EOF'
-    ---
-    title: Agent4 Multi-LLM
-    emoji: 🤖
-    colorFrom: blue
-    colorTo: green
-    sdk: docker
-    app_port: 3000
-    pinned: false
-    ---
-
-    # Agent 4 Multi-LLM Implementation
-
-    A robust multi-LLM AI agent with automatic fallback support.
-
-    ## Features
-    - Multi-provider LLM support (Hugging Face, Mistral, DeepSeek, OpenRouter, Codestral)
-    - Automatic fallback mechanism
-    - Health monitoring
-    - REST API interface
-
-    ## API Endpoint
-    POST /api/agent4/execute
-    EOF
-
-    # Commit and push
-    git add .
-    git commit -m "Deploy from GitHub Actions" || echo "No changes to commit"
-    git push https://oauth2:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/NovusAevum/agent4-implementation main || git push https://oauth2:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/NovusAevum/agent4-implementation main
-
+    name: Build and Push Docker Image
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
   # Job 5: Deploy to Hugging Face Spaces
   deploy-huggingface:
     name: Deploy to Hugging Face Spaces
-    needs: [docker]
+    needs: docker
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     steps:
@@ -171,16 +127,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           lfs: true
-
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-
       - name: Install Hugging Face CLI
-        run: |
-          pip install --upgrade huggingface_hub
-
+        run: pip install --upgrade huggingface-hub
       - name: Deploy to Hugging Face Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
@@ -188,21 +140,14 @@ jobs:
           # Configure git
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
-          
-          # Login to Hugging Face
-          huggingface-cli login --token $HF_TOKEN
-          
-          # Create or update the space
-          huggingface-cli repo create ${{ github.repository }} --type space --space_sdk docker || true
-          
+
           # Clone the space repository
-          git clone https://huggingface.co/spaces/${{ github.repository }} hf-space || git clone https://huggingface.co/spaces/${{ github.repository_owner }}/agent4-implementation hf-space
-          
+          git clone https://huggingface.co/spaces/${{ env.HF_USERNAME }}/${{ env.HF_SPACE_NAME }} hf-space || git clone https://huggingface.co/spaces/${{ env.HF_USERNAME }}/${{ env.HF_SPACE_NAME }} hf-space
           cd hf-space
-          
+
           # Copy necessary files
-          cp -r ../Dockerfile ../huggingface.yaml ../package*.json ../tsconfig.json ../src ../dist ./ || cp -r ../* ./
-          
+          cp -r ../Dockerfile ../huggingface.yaml ../package*.json ../tsconfig.json ../src ../dist ./ || echo "Some files may not exist, continuing..."
+
           # Create README for HF Space
           cat > README.md << 'EOF'
           ---
@@ -214,35 +159,26 @@ jobs:
           app_port: 3000
           pinned: false
           ---
-          
           # Agent 4 Multi-LLM Implementation
-          
           A robust multi-LLM AI agent with automatic fallback support.
-          
           ## Features
           - Multi-provider LLM support (Hugging Face, Mistral, DeepSeek, OpenRouter, Codestral)
           - Automatic fallback mechanism
           - Health monitoring
           - REST API interface
-          
           ## API Endpoint
           POST /api/agent4/execute
           EOF
-          
+
           # Commit and push
           git add .
           git commit -m "Deploy from GitHub Actions" || echo "No changes to commit"
-          git push https://oauth2:${HF_TOKEN}@huggingface.co/spaces/${{ github.repository_owner }}/agent4-implementation main || git push https://oauth2:${HF_TOKEN}@huggingface.co/spaces/${{ github.repository }} main
-
-      - name: Verify deployment
-        run: |
-          echo "✅ Deployment to Hugging Face Spaces completed!"
-          echo "🔗 Space URL: https://huggingface.co/spaces/${{ github.repository }}"
+          git push https://${{ env.HF_USERNAME }}:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/${{ env.HF_USERNAME }}/${{ env.HF_SPACE_NAME }} main
 
   # Job 6: Notify on completion
   notify:
     name: Notify Deployment Status
-    needs: [deploy-huggingface]
+    needs: deploy-huggingface
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -251,6 +187,6 @@ jobs:
           echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Status**: ${{ needs.deploy-huggingface.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Space**: https://huggingface.co/spaces/${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Docker Image**: ghcr.io/${{ github.repository }}:latest" >> $GITHUB_STEP_SUMMARY
+          echo "- **Space**: https://huggingface.co/spaces/${{ env.HF_USERNAME }}/${{ env.HF_SPACE_NAME }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Docker Image**: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
