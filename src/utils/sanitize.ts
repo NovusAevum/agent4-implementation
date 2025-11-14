@@ -90,7 +90,7 @@ export function sanitizeContext(context: Record<string, unknown>): string {
     }
 
     return jsonString;
-  } catch (error) {
+  } catch {
     logger.error('Failed to sanitize context');
     return '{}';
   }
