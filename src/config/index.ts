@@ -13,7 +13,7 @@ const envSchema = z.object({
 
   // Configuration
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.string().default('7860'),
+  PORT: z.string().default('3000'),
   DEFAULT_LLM_PROVIDER: z.string().default('huggingface'),
   FALLBACK_ORDER: z.string().default('huggingface,mistral,deepseek,openrouter,codestral'),
   LOG_LEVEL: z.string().default('info'),
