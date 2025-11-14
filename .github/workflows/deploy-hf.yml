@@ -27,7 +27,7 @@ jobs:
     
     - name: Install huggingface_hub
       run: |
-        pip install huggingface_hub
+        pip install huggingface-hub
     
     - name: Push to Hugging Face Space
       env:
