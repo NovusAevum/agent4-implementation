@@ -177,6 +177,21 @@ app.post('/api/agent4/execute', async (req: Request, res: Response) => {
   }
 });
 
+// Root endpoint - API information
+app.get('/', (_req: Request, res: Response) => {
+  res.status(200).json({
+    name: 'Agent4 Multi-LLM API',
+    version: '1.0.0',
+    status: 'running',
+    endpoints: {
+      health: '/health',
+      metrics: '/metrics',
+      execute: 'POST /api/agent4/execute',
+    },
+    documentation: 'https://github.com/NovusAevum/agent4-implementation',
+  });
+});
+
 // Start the server
 const server = app.listen(PORT, () => {
   logger.info('Agent4 server started', {
