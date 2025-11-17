@@ -54,12 +54,29 @@ export function sanitizeRequest(req: Request, res: Response, next: NextFunction)
     /javascript:/i,
     /onerror=/i,
     /onclick=/i,
-    /../i, // Path traversal
-    /\.\.\//,
-    /%2e%2e/i, // URL encoded path traversal
+    /\.\.[\\/]/i, // Path traversal (.. followed by / or \)
+    /%2e%2e%2f/i, // URL encoded path traversal (../)
+    /%2e%2e%5c/i, // URL encoded path traversal (..\)
   ];
 
+  // Skip infrastructure headers from security checks
+  const infrastructureHeaders = new Set([
+    'x-vercel-id',
+    'x-vercel-cache',
+    'x-forwarded-for',
+    'x-forwarded-proto',
+    'x-forwarded-host',
+    'x-real-ip',
+    'via',
+    'forwarded',
+  ]);
+
   for (const [headerName, headerValue] of Object.entries(req.headers)) {
+    // Skip infrastructure headers
+    if (infrastructureHeaders.has(headerName.toLowerCase())) {
+      continue;
+    }
+
     if (typeof headerValue === 'string') {
       for (const pattern of suspiciousHeaderPatterns) {
         if (pattern.test(headerValue)) {
