@@ -19,6 +19,8 @@ yarn-error.log*
 # Editor directories and files
 .idea
 .vscode
+.cursor
+.windsurf
 *.suo
 *.ntvs*
 *.njsproj
@@ -68,7 +70,7 @@ dist
 
 # Gatsby files
 .cache/
-public
+# public - removed, we need to commit built frontend for deployment
 
 # vuepress build output
 .vuepress/dist
@@ -98,3 +100,4 @@ public
 # Local Netlify folder
 .netlify
 .vercel
+archive/

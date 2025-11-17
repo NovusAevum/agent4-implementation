@@ -9,7 +9,6 @@ export function useHealth(intervalMs: number = 5000) {
 
   useEffect(() => {
     let mounted = true;
-    let intervalId: NodeJS.Timeout;
 
     const fetchHealth = async () => {
       try {
@@ -28,7 +27,7 @@ export function useHealth(intervalMs: number = 5000) {
     };
 
     fetchHealth();
-    intervalId = setInterval(fetchHealth, intervalMs);
+    const intervalId = setInterval(fetchHealth, intervalMs);
 
     return () => {
       mounted = false;

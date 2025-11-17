@@ -3,9 +3,11 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 
 export default defineConfig({
-  plugins: [react({
-    tsDecorators: true
-  })],
+  plugins: [
+    react({
+      tsDecorators: true,
+    }),
+  ],
   root: 'src/frontend',
   build: {
     outDir: '../../public',

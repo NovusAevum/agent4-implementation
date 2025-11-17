@@ -1,6 +1,6 @@
 import type { HealthStatus, ApiInfo, MetricsData, ExecuteRequest, ExecuteResponse } from '../types';
 
-const BASE_URL = '';  // Same origin
+const BASE_URL = ''; // Same origin
 
 export const api = {
   async getInfo(): Promise<ApiInfo> {
