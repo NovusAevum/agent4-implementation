@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
+import path from 'path';
 import { config } from './config/index';
 import { Agent4Workflow } from './agent4/workflow';
 import { FallbackLLM } from './llm/fallback';
@@ -54,6 +55,10 @@ app.use(
 
 // 3. Body Parser with size limits (prevent DoS via large payloads)
 app.use(express.json({ limit: '1mb' }));
+
+// 3.5. Serve static frontend files
+const publicPath = path.join(__dirname, '../public');
+app.use(express.static(publicPath));
 
 // 4. Request ID middleware for distributed tracing
 app.use((req, _res, next) => {
@@ -177,19 +182,10 @@ app.post('/api/agent4/execute', async (req: Request, res: Response) => {
   }
 });
 
-// Root endpoint - API information
-app.get('/', (_req: Request, res: Response) => {
-  res.status(200).json({
-    name: 'Agent4 Multi-LLM API',
-    version: '1.0.0',
-    status: 'running',
-    endpoints: {
-      health: '/health',
-      metrics: '/metrics',
-      execute: 'POST /api/agent4/execute',
-    },
-    documentation: 'https://github.com/NovusAevum/agent4-implementation',
-  });
+// SPA catch-all route - serve index.html for all non-API routes
+// This MUST be last to not interfere with API routes
+app.get('*', (_req: Request, res: Response) => {
+  res.sendFile(path.join(publicPath, 'index.html'));
 });
 
 // Start the server
