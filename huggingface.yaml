@@ -3,13 +3,13 @@
 # Note: This file contains configuration hints for HF Spaces
 # The actual space is created via GitHub Actions deployment
 sdk: docker
-app_port: 7860
+app_port: 3000
 
 # Environment variables
 env_vars:
   # Required environment variables
   - NODE_ENV=production
-  - PORT=7860
+  - PORT=3000
   
   # LLM Provider API Keys
   - HF_TOKEN
@@ -95,7 +95,7 @@ security:
 # Networking
 networking:
   ports:
-    - 7860:7860
+    - 3000:3000
   hostname: app
   domainname: hf.space
 
