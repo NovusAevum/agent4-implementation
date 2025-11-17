@@ -10,16 +10,16 @@
   "routes": [
     {
       "src": "/health",
-      "dest": "/dist/index.js"
+      "dest": "dist/index.js"
     },
     {
       "src": "/api/agent4/execute",
-      "dest": "/dist/index.js",
+      "dest": "dist/index.js",
       "methods": ["POST"]
     },
     {
       "src": "/(.*)",
-      "dest": "/dist/index.js"
+      "dest": "dist/index.js"
     }
   ],
   "env": {
