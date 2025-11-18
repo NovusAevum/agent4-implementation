@@ -1,0 +1,197 @@
+# Hugging Face Spaces Configuration for Agent4 Implementation
+# Documentation: https://huggingface.co/docs/hub/spaces-config-reference
+
+# Metadata
+name: Agent4 Multi-LLM Implementation
+description: Enterprise-grade agent orchestration with intelligent fallback mechanisms across multiple LLM providers
+owner: LetsTryGPT
+license: mit
+tags:
+  - agent
+  - llm
+  - multi-agent
+  - fallback
+  - orchestration
+  - ai
+  - automation
+  - typescript
+  - nodejs
+
+# Space Configuration
+sdk: gradio
+app_file: app.py
+python_version: "3.11"
+emoji: 🤖
+colorFrom: blue
+colorTo: green
+pinned: false
+
+# Repository Settings
+repo_url: https://github.com/LetsTryGPT/agent4-implementation
+repo_type: git
+branch: main
+
+# Persistent Storage
+persistent_data:
+  enabled: true
+  path: /data
+  size_gb: 10
+
+# Resource Allocation
+resources:
+  cpu: "2-cpu"
+  memory: "16GB"
+  gpu: null  # Set to "t4-small" or "a10g-small" for GPU support
+  disk: "50GB"
+
+# Environment Variables
+env_variables:
+  # Application Configuration
+  NODE_ENV: production
+  PORT: "3000"
+  LOG_LEVEL: info
+  
+  # LLM Provider Settings (users must set these as secrets)
+  DEFAULT_LLM_PROVIDER: huggingface
+  FALLBACK_ORDER: huggingface,mistral,deepseek,openrouter,codestral
+  
+  # API Configuration
+  CORS_ORIGIN: "https://huggingface.co,https://hf.space"
+  RATE_LIMIT_WINDOW_MS: "900000"
+  RATE_LIMIT_MAX_REQUESTS: "100"
+  
+  # Telemetry
+  OTEL_ENABLED: "true"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318"
+
+# Secrets (must be set via Hugging Face Spaces UI)
+secrets:
+  - name: HF_TOKEN
+    description: Hugging Face API token for model access
+    required: true
+  
+  - name: MISTRAL_API_KEY
+    description: Mistral API key for fallback provider
+    required: false
+  
+  - name: DEEPSEEK_API_KEY
+    description: DeepSeek API key for fallback provider
+    required: false
+  
+  - name: OPENROUTER_API_KEY
+    description: OpenRouter API key for multi-model access
+    required: false
+  
+  - name: CODESTRAL_API_KEY
+    description: Codestral API key for code generation
+    required: false
+
+# Health Check Configuration
+health_check:
+  path: /health
+  protocol: http
+  initial_delay_seconds: 30
+  period_seconds: 10
+  timeout_seconds: 5
+  success_threshold: 1
+  failure_threshold: 3
+
+# Startup Script
+startup_commands:
+  - echo "Building Agent4 implementation..."
+  - npm ci --production=false
+  - npm run build
+  - echo "Build completed successfully"
+  - echo "Starting Gradio interface..."
+
+# Shutdown Hooks
+shutdown_commands:
+  - echo "Gracefully shutting down Agent4..."
+  - pkill -SIGTERM node
+  - sleep 5
+
+# Docker Configuration
+docker:
+  dockerfile_path: "Dockerfile"
+  build_args:
+    NODE_ENV: "production"
+    PYTHON_VERSION: "3.11"
+  base_image: "node:18-slim"
+
+# Persistent Storage Cleanup (optional)
+storage_cleanup:
+  enabled: false
+  retention_days: 30
+  path: /data
+
+# Monitoring and Analytics
+monitoring:
+  metrics_enabled: true
+  metrics_path: /metrics
+  tracing_enabled: true
+  
+# Custom Domains (optional, requires premium)
+custom_domains: []
+
+# Rate Limiting at CDN Level
+cdn_config:
+  cache_ttl: 300
+  cache_control: "public, max-age=300"
+
+# OAuth Configuration (if needed)
+oauth:
+  enabled: false
+
+# API Documentation
+api_docs:
+  enabled: true
+  path: /api-docs
+  openapi_schema: openapi.json
+
+# Logging Configuration
+logging:
+  level: info
+  format: json
+  max_file_size_mb: 100
+  retention_days: 30
+  
+# Security Headers
+security:
+  content_security_policy: "default-src 'self'; script-src 'self' 'unsafe-inline'"
+  x_frame_options: SAMEORIGIN
+  x_content_type_options: nosniff
+  strict_transport_security: "max-age=31536000; includeSubDomains"
+
+# Advanced Networking
+networking:
+  enable_ipv6: true
+  enable_http2: true
+  
+# Build Cache
+build_cache:
+  enabled: true
+  max_size_gb: 5
+
+# Artifact Retention
+artifacts:
+  retention_days: 7
+  max_size_gb: 10
+
+# Feature Flags
+features:
+  gradio_v4: true
+  persistent_storage: true
+  custom_startup: true
+  analytics: true
+
+# Documentation Links
+documentation:
+  readme: README_HF_SPACE.md
+  contributing: CONTRIBUTING.md
+  architecture: docs/ARCHITECTURE.md
+  
+# Support Configuration
+support:
+  email: support@example.com
+  github_issues_enabled: true
+  discussions_enabled: true
