@@ -175,6 +175,21 @@ graph TB
 
 State-of-the-art frontend featuring glass morphism design, real-time health monitoring, interactive API playground, and chat interface. Fully responsive across mobile, tablet, and desktop devices.
 
+### 📸 Live Demo
+
+> **🎯 Quick Start:** See the [Screenshot Guide](SCREENSHOT_GUIDE.md) for instructions on viewing the live UI locally.
+
+```bash
+npm run dev              # Start backend (http://localhost:3000)
+npm run dev:frontend     # Start frontend (http://localhost:5173)
+```
+
+**Interactive Features:**
+- 🏥 **Health Monitor** - Real-time system metrics with 5s polling
+- 🛠️ **API Playground** - Test LLM providers with live requests
+- 💬 **Chat Interface** - Interactive conversation with Agent4
+- 📱 **Fully Responsive** - Optimized for mobile, tablet, and desktop
+
 </div>
 
 ### 🌟 UI Features
